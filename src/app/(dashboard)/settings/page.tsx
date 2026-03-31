@@ -58,9 +58,15 @@ export default function SettingsPage() {
 
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("name, niche, bio, tracker_motivation, tracker_daily_fact")
+      .select("name, niche, bio")
       .eq("id", user.id)
       .single()
+
+    // Add tracker settings with defaults if not in DB yet
+    if (profileData) {
+      profileData.tracker_motivation = profileData.tracker_motivation ?? false
+      profileData.tracker_daily_fact = profileData.tracker_daily_fact ?? false
+    }
 
     const { data: telegramData } = await supabase
       .from("telegram_accounts")
@@ -95,7 +101,14 @@ export default function SettingsPage() {
       data: { user },
     } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from("profiles").update(profile).eq("id", user.id)
+      // Try to save all fields, if tracker fields don't exist yet - save without them
+      const { error } = await supabase.from("profiles").update(profile).eq("id", user.id)
+
+      if (error && error.message.includes("column") && error.message.includes("does not exist")) {
+        // Fallback: save only basic fields
+        const { name, niche, bio } = profile
+        await supabase.from("profiles").update({ name, niche, bio }).eq("id", user.id)
+      }
     }
     setSaving(false)
   }

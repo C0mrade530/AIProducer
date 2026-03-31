@@ -10,6 +10,13 @@ import { sendMessage } from "@/lib/telegram/bot"
  * 2. callback_query — task inline buttons (done/postpone/skip)
  */
 export async function POST(request: NextRequest) {
+  // Verify Telegram webhook secret token
+  const secretToken = request.headers.get("x-telegram-bot-api-secret-token")
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (expectedSecret && secretToken !== expectedSecret) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
   const body = await request.json()
   const supabase = await createClient()
 
@@ -146,6 +153,7 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           url: `${url}/api/telegram`,
           allowed_updates: ["message", "callback_query"],
+          secret_token: process.env.TELEGRAM_WEBHOOK_SECRET || undefined,
         }),
       }
     )

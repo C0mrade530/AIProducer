@@ -7,6 +7,10 @@ import {
   getPreviousAgentCodes,
 } from "@/lib/agents/engine"
 import { loadAgentPrompt, getPipelineInstructions } from "@/lib/agents/prompts"
+import { verifyProjectAccess } from "@/lib/auth/project-access"
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
+import { agentRunSchema } from "@/lib/validations"
+import { checkAgentRunLimit } from "@/lib/auth/subscription-limits"
 
 export async function POST(
   request: NextRequest,
@@ -23,11 +27,38 @@ export async function POST(
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const body = await request.json()
-  const { message, projectId, runId, isArtifactRequest } = body
+  // Rate limit
+  const rl = checkRateLimit(`agent:${user.id}`, RATE_LIMITS.agentRun)
+  if (!rl.success) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+    })
+  }
 
-  if (!message || !projectId) {
-    return new Response("Missing message or projectId", { status: 400 })
+  const body = await request.json()
+  const parsed = agentRunSchema.safeParse(body)
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: "Invalid input", details: parsed.error.flatten() }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+  const { message, projectId, runId, isArtifactRequest } = parsed.data
+
+  // Verify user has access to the project
+  const workspaceId = await verifyProjectAccess(supabase, user.id, projectId)
+  if (!workspaceId) {
+    return new Response("Project not found or access denied", { status: 403 })
+  }
+
+  // Check subscription limits
+  const limitCheck = await checkAgentRunLimit(supabase, workspaceId)
+  if (!limitCheck.allowed) {
+    return new Response(JSON.stringify({ error: limitCheck.reason, usage: limitCheck.usage, limit: limitCheck.limit }), {
+      status: 402,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 
   // Get agent definition from DB

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { verifyProjectAccess } from "@/lib/auth/project-access"
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
+import { artifactCreateSchema } from "@/lib/validations"
 
 /**
  * POST /api/artifacts — сохранить артефакт из чата агента
@@ -22,14 +25,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { projectId, agentCode, runId, title, type, contentMd, contentJson } =
-    body
+  // Rate limit
+  const rl = checkRateLimit(`artifact:${user.id}`, RATE_LIMITS.artifactSave)
+  if (!rl.success) {
+    return NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+    })
+  }
 
-  if (!projectId || !agentCode || !title || !contentMd) {
+  const body = await request.json()
+  const parsed = artifactCreateSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Missing required fields" },
+      { error: "Invalid input", details: parsed.error.flatten() },
       { status: 400 }
+    )
+  }
+  const { projectId, agentCode, runId, title, type, contentMd, contentJson } =
+    parsed.data
+
+  // Verify user has access to the project
+  const workspaceId = await verifyProjectAccess(supabase, user.id, projectId)
+  if (!workspaceId) {
+    return NextResponse.json(
+      { error: "Project not found or access denied" },
+      { status: 403 }
     )
   }
 
@@ -143,6 +164,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { error: "Missing projectId" },
       { status: 400 }
+    )
+  }
+
+  // Verify user has access to the project
+  const hasAccess = await verifyProjectAccess(supabase, user.id, projectId)
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: "Project not found or access denied" },
+      { status: 403 }
     )
   }
 

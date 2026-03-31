@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createPayment, PLANS, type PlanKey } from "@/lib/payments/yookassa"
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
+import { paymentCreateSchema } from "@/lib/validations"
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -11,13 +13,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { plan } = await request.json()
-
-  if (!plan || !PLANS[plan as PlanKey]) {
-    return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
+  // Rate limit
+  const rl = checkRateLimit(`payment:${user.id}`, RATE_LIMITS.paymentCreate)
+  if (!rl.success) {
+    return NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+    })
   }
 
-  const selectedPlan = PLANS[plan as PlanKey]
+  const body = await request.json()
+  const parsed = paymentCreateSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid input", details: parsed.error.flatten() },
+      { status: 400 }
+    )
+  }
+
+  const { plan } = parsed.data
+  const selectedPlan = PLANS[plan]
 
   // Get workspace
   const { data: workspace } = await supabase

@@ -92,7 +92,8 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
         )}
         {AGENTS.map((agent) => {
           const isActive = pathname === `/agent/${agent.code}`
-          const isLocked = agent.step > currentStep + 1
+          // Tracker agent is always accessible (free chat)
+          const isLocked = agent.code === "tracker" ? false : agent.step > currentStep + 1
           const isCompleted = agent.step < currentStep
           const isCurrent = agent.step === currentStep
 

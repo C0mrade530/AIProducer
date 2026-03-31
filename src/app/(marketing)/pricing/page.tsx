@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, Sparkles, ArrowLeft } from "lucide-react"
@@ -12,45 +12,45 @@ const plans = [
   {
     key: "starter",
     name: "Starter",
-    price: 1990,
+    price: 2990,
     description: "Для первого запуска",
     features: [
-      "1 проект",
+      "1 распаковка (проект)",
       "Все 7 AI-агентов",
-      "30 запусков агентов/мес",
-      "Сохранение артефактов",
+      "Сохранение и экспорт артефактов",
       "Базовый трекер задач",
+      "Ежемесячное продление",
     ],
     popular: false,
   },
   {
     key: "pro",
     name: "Pro",
-    price: 4990,
+    price: 5490,
     description: "Для серьёзного роста",
     features: [
-      "3 проекта",
+      "3 распаковки (проекта)",
       "Все 7 AI-агентов",
-      "100 запусков агентов/мес",
-      "Telegram-трекер",
+      "Telegram-трекер и мотивация",
+      "Экспорт артефактов",
       "Приоритетная генерация",
-      "5 файлов знаний на агента",
+      "Свободный чат с трекером",
     ],
     popular: true,
   },
   {
     key: "premium",
     name: "Premium",
-    price: 9990,
+    price: 8990,
     description: "Максимум возможностей",
     features: [
-      "Безлимит проектов",
+      "5 распаковок (проектов)",
       "Все 7 AI-агентов",
-      "300 запусков агентов/мес",
-      "Telegram-трекер",
+      "Telegram-трекер и мотивация",
+      "Экспорт артефактов",
       "Приоритетная генерация",
+      "Свободный чат с трекером",
       "Opus 4.6 для артефактов",
-      "10 файлов знаний на агента",
       "Приоритетная поддержка",
     ],
     popular: false,
@@ -59,6 +59,8 @@ const plans = [
 
 export default function PricingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isWelcome = searchParams.get("welcome") === "1"
   const [loading, setLoading] = useState<string | null>(null)
 
   const handlePurchase = async (planKey: string) => {
@@ -112,11 +114,19 @@ export default function PricingPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
+          {isWelcome && (
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm text-primary">
+              <Sparkles className="h-4 w-4" />
+              Аккаунт создан! Выбери тариф, чтобы начать работу
+            </div>
+          )}
           <h1 className="font-heading text-4xl font-bold mb-3">
-            Выбери свой тариф
+            {isWelcome ? "Целая команда AI-экспертов в твоём телефоне" : "Выбери свой тариф"}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Начни создавать онлайн-продукт с AI уже сегодня
+            {isWelcome
+              ? "7 агентов проведут тебя от идеи до запуска продукта"
+              : "Начни создавать онлайн-продукт с AI уже сегодня"}
           </p>
         </div>
 

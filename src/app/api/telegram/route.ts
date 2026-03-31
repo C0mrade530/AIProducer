@@ -20,14 +20,17 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const supabase = await createClient()
 
-  // Handle /start command (account linking)
+  // Handle /start command (account linking with 6-char code)
   if (body.message?.text?.startsWith("/start")) {
     const parts = body.message.text.split(" ")
-    const linkToken = parts[1]
+    const rawToken = parts[1]?.trim()
     const telegramUser = body.message.from
     const chatId = body.message.chat.id
 
-    if (linkToken) {
+    if (rawToken) {
+      // Normalize: remove dash if user typed "A3K-9MX", uppercase
+      const linkToken = rawToken.replace(/-/g, "").toUpperCase()
+
       // Find the linking token in telegram_accounts
       const { data: account } = await supabase
         .from("telegram_accounts")
@@ -57,15 +60,52 @@ export async function POST(request: NextRequest) {
       } else {
         await sendMessage(
           chatId,
-          `❌ Ссылка для привязки недействительна или уже использована.\n\nПерейди в настройки AIProducer и создай новую ссылку.`
+          `❌ Код привязки недействителен или уже использован.\n\nПерейди в настройки AIProducer и создай новый код.`
         )
       }
     } else {
       // Just /start without token
       await sendMessage(
         chatId,
-        `👋 <b>Привет! Я — AIProducer Bot.</b>\n\nЯ помогу тебе оставаться в тонусе и выполнять задачи по созданию онлайн-продукта.\n\nЧтобы начать, привяжи свой аккаунт в настройках на сайте AIProducer.`
+        `👋 <b>Привет! Я — AIProducer Bot.</b>\n\nЯ помогу тебе оставаться в тонусе и выполнять задачи по созданию онлайн-продукта.\n\nЧтобы начать, привяжи свой аккаунт:\n1. Открой настройки на сайте AIProducer\n2. Нажми «Привязать Telegram»\n3. Введи полученный код здесь: <code>/start КОД</code>`
       )
+    }
+
+    return NextResponse.json({ ok: true })
+  }
+
+  // Handle manual code entry (user types code directly without /start)
+  if (body.message?.text && /^[A-Z2-9]{3}-?[A-Z2-9]{3}$/i.test(body.message.text.trim())) {
+    const chatId = body.message.chat.id
+    const telegramUser = body.message.from
+    const linkToken = body.message.text.trim().replace(/-/g, "").toUpperCase()
+
+    const { data: account } = await supabase
+      .from("telegram_accounts")
+      .select("id, user_id")
+      .eq("linking_token", linkToken)
+      .is("telegram_user_id", null)
+      .single()
+
+    if (account) {
+      await supabase
+        .from("telegram_accounts")
+        .update({
+          telegram_user_id: telegramUser.id,
+          username: telegramUser.username || null,
+          first_name: telegramUser.first_name || null,
+          chat_id: chatId,
+          linked_at: new Date().toISOString(),
+          linking_token: null,
+        })
+        .eq("id", account.id)
+
+      await sendMessage(
+        chatId,
+        `✅ <b>Аккаунт привязан!</b>\n\nТеперь я буду присылать тебе напоминания, мотивацию и уведомления о прогрессе. 🚀`
+      )
+    } else {
+      await sendMessage(chatId, `❌ Код недействителен или уже использован. Проверь код в настройках на сайте.`)
     }
 
     return NextResponse.json({ ok: true })

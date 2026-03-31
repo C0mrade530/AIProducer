@@ -137,6 +137,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Create first project if none exists (new user just paid after registration)
+    const { data: existingProjects } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .limit(1)
+
+    if (!existingProjects || existingProjects.length === 0) {
+      await supabase.from("projects").insert({
+        workspace_id: workspaceId,
+        name: "Мой первый продукт",
+      })
+    }
+
     // Log usage
     await supabase.from("usage_events").insert({
       workspace_id: workspaceId,

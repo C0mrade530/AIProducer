@@ -74,26 +74,15 @@ export default function RegisterPage() {
       return
     }
 
-    // Create membership, project, subscription in parallel
-    await Promise.all([
-      supabase.from("workspace_members").insert({
-        workspace_id: workspace.id,
-        user_id: user.id,
-        role: "owner",
-      }),
-      supabase.from("projects").insert({
-        workspace_id: workspace.id,
-        name: "Мой первый продукт",
-      }),
-      supabase.from("subscriptions").insert({
-        workspace_id: workspace.id,
-        plan: "starter",
-        status: "active",
-      }),
-    ])
+    // Create membership (no subscription yet — user must pay first)
+    await supabase.from("workspace_members").insert({
+      workspace_id: workspace.id,
+      user_id: user.id,
+      role: "owner",
+    })
 
-    // Go straight to first agent
-    window.location.href = "/agent/unpacker?welcome=1"
+    // Redirect to pricing — user must choose and pay before accessing agents
+    window.location.href = "/pricing?welcome=1"
   }
 
   return (
@@ -159,7 +148,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-destructive">{error}</p>
               )}
               <Button type="submit" className="w-full h-12 text-base" loading={loading}>
-                Начать бесплатно
+                Создать аккаунт
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </form>

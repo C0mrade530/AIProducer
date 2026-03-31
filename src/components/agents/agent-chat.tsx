@@ -18,6 +18,7 @@ import {
   X,
   ChevronRight,
   BookOpen,
+  Download,
 } from "lucide-react"
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
 
@@ -334,7 +335,27 @@ export function AgentChat({
                         />
                       </>
                     )}
-                    {agentCode !== "unpacker" && (
+                    {agentCode === "tracker" && (
+                      <>
+                        <QuickAction
+                          text="Мой прогресс"
+                          onClick={() => setInput("Покажи мой текущий прогресс и невыполненные задачи.")}
+                        />
+                        <QuickAction
+                          text="Что делать сегодня?"
+                          onClick={() => setInput("Составь мне план на сегодня исходя из моих задач.")}
+                        />
+                        <QuickAction
+                          text="Мотивация"
+                          onClick={() => setInput("Мне нужна мотивация. Напомни, к чему я иду.")}
+                        />
+                        <QuickAction
+                          text="Свободный вопрос"
+                          onClick={() => setInput("")}
+                        />
+                      </>
+                    )}
+                    {agentCode !== "unpacker" && agentCode !== "tracker" && (
                       <QuickAction
                         text="Начать работу"
                         onClick={() =>
@@ -509,6 +530,21 @@ export function AgentChat({
                   <p className="text-xs text-muted-foreground line-clamp-6 whitespace-pre-wrap">
                     {artifact.content_md}
                   </p>
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([artifact.content_md], { type: "text/markdown;charset=utf-8" })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement("a")
+                      a.href = url
+                      a.download = `${artifact.title.replace(/[^a-zA-Zа-яА-Я0-9\s-]/g, "").trim()}.md`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
+                    <Download className="h-3 w-3" />
+                    Скачать .md
+                  </button>
                 </div>
               ))}
 

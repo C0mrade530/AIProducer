@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const payment = await createPayment({
       amount: selectedPlan.price,
       description: `AIProducer — подписка ${selectedPlan.name}`,
-      returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?payment=success`,
+      returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/agent/unpacker?welcome=1`,
       metadata: {
         workspace_id: workspace.id,
         plan,

@@ -26,11 +26,23 @@ export default async function DashboardLayout({
     .eq("owner_id", user.id)
     .single()
 
+  if (!workspace) redirect("/pricing")
+
+  // Check active subscription — no free tier
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("id, status")
+    .eq("workspace_id", workspace.id)
+    .eq("status", "active")
+    .single()
+
+  if (!subscription) redirect("/pricing")
+
   // Get project
   const { data: project } = await supabase
     .from("projects")
     .select("id, current_step")
-    .eq("workspace_id", workspace?.id)
+    .eq("workspace_id", workspace.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .single()

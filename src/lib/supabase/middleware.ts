@@ -6,7 +6,9 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(
+  // Only refresh the session cookie — no auth checks in middleware
+  // Auth checks happen in page components (client-side)
+  createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -28,32 +30,6 @@ export async function updateSession(request: NextRequest) {
       },
     }
   )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Protected routes
-  const isProtectedRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/onboarding")
-
-  if (isProtectedRoute && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
-  }
-
-  // Redirect logged-in users from auth pages
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register")
-
-  if (isAuthRoute && user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
-    return NextResponse.redirect(url)
-  }
 
   return supabaseResponse
 }

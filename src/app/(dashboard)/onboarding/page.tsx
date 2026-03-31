@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -11,53 +11,102 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    // Check if already onboarded
+    checkOnboarding()
+  }, [])
+
+  const checkOnboarding = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push("/login"); return }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single()
+
+    if (profile?.onboarding_completed) {
+      router.push("/dashboard")
+      return
+    }
+    setChecking(false)
+  }
 
   const handleComplete = async () => {
     if (!name.trim()) return
     setLoading(true)
+    setError("")
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setError("Сессия истекла. Войдите заново."); setLoading(false); return }
 
-    // Update profile
-    await supabase.from("profiles").update({
+    // Step 1: Update profile
+    const { error: profileError } = await supabase.from("profiles").update({
       name: name.trim(),
       onboarding_completed: true,
     }).eq("id", user.id)
 
-    // Create workspace
-    const { data: workspace } = await supabase.from("workspaces").insert({
-      owner_id: user.id,
-      title: `${name.trim()}`,
-      niche: "",
-    }).select().single()
-
-    if (workspace) {
-      await supabase.from("workspace_members").insert({
-        workspace_id: workspace.id,
-        user_id: user.id,
-        role: "owner",
-      })
-
-      await supabase.from("projects").insert({
-        workspace_id: workspace.id,
-        name: "Мой первый продукт",
-      })
-
-      await supabase.from("subscriptions").insert({
-        workspace_id: workspace.id,
-        plan: "starter",
-        status: "active",
-      })
+    if (profileError) {
+      console.error("Profile update error:", profileError)
+      setError("Ошибка сохранения. Попробуйте ещё раз.")
+      setLoading(false)
+      return
     }
 
-    router.push("/dashboard?tour=1")
+    // Step 2: Create workspace
+    const { data: workspace, error: wsError } = await supabase.from("workspaces").insert({
+      owner_id: user.id,
+      title: name.trim(),
+      niche: "",
+    }).select("id").single()
+
+    if (wsError || !workspace) {
+      console.error("Workspace error:", wsError)
+      // Already has workspace? Go to dashboard
+      router.push("/dashboard?tour=1")
+      return
+    }
+
+    // Step 3: Add member
+    await supabase.from("workspace_members").insert({
+      workspace_id: workspace.id,
+      user_id: user.id,
+      role: "owner",
+    })
+
+    // Step 4: Create project
+    await supabase.from("projects").insert({
+      workspace_id: workspace.id,
+      name: "Мой первый продукт",
+    })
+
+    // Step 5: Create subscription
+    await supabase.from("subscriptions").insert({
+      workspace_id: workspace.id,
+      plan: "starter",
+      status: "active",
+    })
+
+    // Navigate with tour
+    window.location.href = "/dashboard?tour=1"
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && name.trim()) {
-      handleComplete()
-    }
+    if (e.key === "Enter" && name.trim()) handleComplete()
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -86,6 +135,7 @@ export default function OnboardingPage() {
             autoFocus
             className="text-center text-lg h-14 mb-4"
           />
+          {error && <p className="text-sm text-destructive mb-4">{error}</p>}
           <Button
             onClick={handleComplete}
             disabled={!name.trim()}

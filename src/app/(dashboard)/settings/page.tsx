@@ -106,8 +106,11 @@ export default function SettingsPage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    // Generate linking token
-    const token = crypto.randomUUID().replace(/-/g, "").substring(0, 16)
+    // Generate simple 6-char linking code (e.g. "A3K-9MX")
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I confusion
+    const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+    const part2 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+    const token = `${part1}${part2}` // stored without dash, displayed with
 
     // Check if telegram_account exists
     const { data: existing } = await supabase
@@ -234,11 +237,31 @@ export default function SettingsPage() {
                 </p>
 
                 {telegramLink ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Input value={telegramLink} readOnly className="text-sm" />
+                  <div className="space-y-4">
+                    {/* Show code prominently */}
+                    <div className="bg-muted/50 rounded-xl p-5 text-center">
+                      <p className="text-xs text-muted-foreground mb-2">Твой код привязки:</p>
+                      <p className="font-mono text-3xl font-bold tracking-widest">
+                        {telegramLink.split("start=")[1]?.substring(0, 3)}-{telegramLink.split("start=")[1]?.substring(3, 6)}
+                      </p>
+                    </div>
+                    <div className="space-y-2.5">
+                      <p className="text-sm font-medium">Как привязать:</p>
+                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                        <li>Открой бота <a href={telegramLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@aiproducer_bot</a></li>
+                        <li>Нажми Start</li>
+                        <li>Бот привяжет аккаунт автоматически</li>
+                      </ol>
+                    </div>
+                    <div className="flex gap-2">
+                      <a href={telegramLink} target="_blank" rel="noopener noreferrer" className="flex-1">
+                        <Button variant="outline" className="w-full cursor-pointer">
+                          <ExternalLink className="h-4 w-4" />
+                          Открыть бота
+                        </Button>
+                      </a>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         onClick={copyLink}
                         className="shrink-0 cursor-pointer"
@@ -250,19 +273,6 @@ export default function SettingsPage() {
                         )}
                       </Button>
                     </div>
-                    <a
-                      href={telegramLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Открыть в Telegram
-                    </a>
-                    <p className="text-xs text-muted-foreground">
-                      Нажмите &quot;Start&quot; в боте, чтобы завершить
-                      привязку. После этого обновите страницу.
-                    </p>
                   </div>
                 ) : (
                   <Button

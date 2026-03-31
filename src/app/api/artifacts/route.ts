@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server"
 import { verifyProjectAccess } from "@/lib/auth/project-access"
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 import { artifactCreateSchema } from "@/lib/validations"
+import { extractTasksFromArtifact } from "@/lib/tasks/extract"
+import { sendTaskReminder, sendStageComplete } from "@/lib/telegram/bot"
+import { AGENTS } from "@/lib/agents/constants"
 
 /**
  * POST /api/artifacts — сохранить артефакт из чата агента
@@ -142,6 +145,82 @@ export async function POST(request: NextRequest) {
         artifact_type: type,
       },
     })
+  }
+
+  // ═══ AUTO-CREATE TASKS FROM ARTIFACT ═══
+  // Extract actionable tasks from artifact content using AI
+  // Works for all agents, but tracker agent produces the most tasks
+  try {
+    const extractedTasks = await extractTasksFromArtifact(contentMd, agentCode)
+
+    if (extractedTasks.length > 0) {
+      const now = new Date()
+      const tasksToInsert = extractedTasks.map((t) => ({
+        project_id: projectId,
+        title: t.title,
+        description: t.description || null,
+        status: "pending",
+        priority: t.priority || 2,
+        due_at: t.due_days
+          ? new Date(now.getTime() + t.due_days * 86400000).toISOString()
+          : null,
+        source_agent: agentCode,
+        source_artifact_id: artifact.id,
+      }))
+
+      const { data: createdTasks } = await supabase
+        .from("tasks")
+        .insert(tasksToInsert)
+        .select("id, title, due_at")
+
+      // Send task reminders to Telegram (if linked)
+      if (createdTasks && createdTasks.length > 0) {
+        const { data: telegramAccount } = await supabase
+          .from("telegram_accounts")
+          .select("chat_id")
+          .eq("user_id", user.id)
+          .not("chat_id", "is", null)
+          .single()
+
+        if (telegramAccount?.chat_id) {
+          // Send first 3 tasks as reminders
+          for (const task of createdTasks.slice(0, 3)) {
+            await sendTaskReminder(
+              telegramAccount.chat_id,
+              task.id,
+              task.title,
+              task.due_at || undefined
+            )
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // Don't fail artifact save if task extraction fails
+    console.error("Task extraction error:", error)
+  }
+
+  // ═══ NOTIFY TELEGRAM: STAGE COMPLETE ═══
+  try {
+    const { data: telegramAccount } = await supabase
+      .from("telegram_accounts")
+      .select("chat_id")
+      .eq("user_id", user.id)
+      .not("chat_id", "is", null)
+      .single()
+
+    if (telegramAccount?.chat_id) {
+      const currentAgent = AGENTS.find((a) => a.code === agentCode)
+      const nextAgent = AGENTS.find((a) => a.step === (currentAgent?.step || 0) + 1)
+
+      await sendStageComplete(
+        telegramAccount.chat_id,
+        currentAgent?.name || agentCode,
+        nextAgent?.name
+      )
+    }
+  } catch {
+    // Non-critical, don't fail
   }
 
   return NextResponse.json({ artifact })

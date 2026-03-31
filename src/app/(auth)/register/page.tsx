@@ -26,7 +26,7 @@ export default function RegisterPage() {
     setError("")
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
@@ -37,10 +37,19 @@ export default function RegisterPage() {
       } else {
         setError(error.message)
       }
-    } else {
-      router.push("/onboarding")
+      setLoading(false)
+      return
     }
-    setLoading(false)
+
+    // FIX #1: Check if session exists (email confirmation may be required)
+    if (!data.session) {
+      setError("Подтвердите email по ссылке в письме, затем войдите.")
+      setLoading(false)
+      return
+    }
+
+    // Session exists — go to onboarding
+    window.location.href = "/onboarding"
   }
 
   return (

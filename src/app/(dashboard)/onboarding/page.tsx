@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -13,9 +13,9 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [checking, setChecking] = useState(true)
+  const submittedRef = useRef(false) // FIX #2: prevent double submit
 
   useEffect(() => {
-    // Check if already onboarded
     checkOnboarding()
   }, [])
 
@@ -31,35 +31,50 @@ export default function OnboardingPage() {
       .single()
 
     if (profile?.onboarding_completed) {
-      router.push("/dashboard")
-      return
+      // Check if workspace exists too
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("owner_id", user.id)
+        .limit(1)
+        .single()
+
+      if (workspace) {
+        router.push("/dashboard")
+        return
+      }
+      // Profile says done but no workspace — reset and let them redo
+      await supabase.from("profiles").update({ onboarding_completed: false }).eq("id", user.id)
     }
     setChecking(false)
   }
 
   const handleComplete = async () => {
-    if (!name.trim()) return
+    if (!name.trim() || submittedRef.current) return
+    submittedRef.current = true // FIX #2: block double submit
     setLoading(true)
     setError("")
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError("Сессия истекла. Войдите заново."); setLoading(false); return }
+    if (!user) { setError("Сессия истекла. Войдите заново."); setLoading(false); submittedRef.current = false; return }
 
-    // Step 1: Update profile
-    const { error: profileError } = await supabase.from("profiles").update({
-      name: name.trim(),
-      onboarding_completed: true,
-    }).eq("id", user.id)
+    // FIX #2: Check if workspace already exists
+    const { data: existingWs } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_id", user.id)
+      .limit(1)
+      .single()
 
-    if (profileError) {
-      console.error("Profile update error:", profileError)
-      setError("Ошибка сохранения. Попробуйте ещё раз.")
-      setLoading(false)
+    if (existingWs) {
+      // Already has workspace — just mark onboarding done and go
+      await supabase.from("profiles").update({ name: name.trim(), onboarding_completed: true }).eq("id", user.id)
+      window.location.href = "/dashboard?tour=1"
       return
     }
 
-    // Step 2: Create workspace
+    // Step 1: Create workspace first (before marking onboarding complete)
     const { data: workspace, error: wsError } = await supabase.from("workspaces").insert({
       owner_id: user.id,
       title: name.trim(),
@@ -68,32 +83,36 @@ export default function OnboardingPage() {
 
     if (wsError || !workspace) {
       console.error("Workspace error:", wsError)
-      // Already has workspace? Go to dashboard
-      router.push("/dashboard?tour=1")
+      setError("Ошибка создания. Попробуйте ещё раз.")
+      setLoading(false)
+      submittedRef.current = false
       return
     }
 
-    // Step 3: Add member
-    await supabase.from("workspace_members").insert({
-      workspace_id: workspace.id,
-      user_id: user.id,
-      role: "owner",
-    })
+    // Step 2: Create member, project, subscription
+    await Promise.all([
+      supabase.from("workspace_members").insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        role: "owner",
+      }),
+      supabase.from("projects").insert({
+        workspace_id: workspace.id,
+        name: "Мой первый продукт",
+      }),
+      supabase.from("subscriptions").insert({
+        workspace_id: workspace.id,
+        plan: "starter",
+        status: "active",
+      }),
+    ])
 
-    // Step 4: Create project
-    await supabase.from("projects").insert({
-      workspace_id: workspace.id,
-      name: "Мой первый продукт",
-    })
+    // Step 3: Only NOW mark onboarding complete (after workspace exists)
+    await supabase.from("profiles").update({
+      name: name.trim(),
+      onboarding_completed: true,
+    }).eq("id", user.id)
 
-    // Step 5: Create subscription
-    await supabase.from("subscriptions").insert({
-      workspace_id: workspace.id,
-      plan: "starter",
-      status: "active",
-    })
-
-    // Navigate with tour
     window.location.href = "/dashboard?tour=1"
   }
 
@@ -138,7 +157,7 @@ export default function OnboardingPage() {
           {error && <p className="text-sm text-destructive mb-4">{error}</p>}
           <Button
             onClick={handleComplete}
-            disabled={!name.trim()}
+            disabled={!name.trim() || loading}
             loading={loading}
             size="xl"
             className="w-full cursor-pointer"

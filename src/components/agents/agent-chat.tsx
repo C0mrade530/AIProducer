@@ -209,7 +209,9 @@ export function AgentChat({
         setSavedSuccess(true)
         setShowNextAgent(true)
 
-        // Close modal after brief success state
+        // FIX #5: Notify sidebar to refresh step data
+        window.dispatchEvent(new Event("aiproducer:step-updated"))
+
         setTimeout(() => {
           setShowSaveModal(false)
           setSaveMessageIndex(null)

@@ -17,6 +17,7 @@ export default function AgentPage() {
   const [messages, setMessages] = useState<Array<{ role: string; content: string; created_at?: string }>>([])
   const [artifacts, setArtifacts] = useState<Array<{ id: string; type: string; title: string; content_md: string; status: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [agentError, setAgentError] = useState("")
 
   useEffect(() => {
     if (!agentConfig) { router.push("/dashboard"); return }
@@ -54,7 +55,11 @@ export default function AgentPage() {
       .eq("code", agentCode)
       .single()
 
-    if (!agentDef) { setLoading(false); return }
+    if (!agentDef) {
+      setAgentError("Агент не найден в базе данных. Обратитесь к администратору.")
+      setLoading(false)
+      return
+    }
 
     // Existing run
     const { data: existingRun } = await supabase
@@ -89,6 +94,22 @@ export default function AgentPage() {
   }
 
   if (!agentConfig) return null
+
+  // FIX #6: Show error state instead of blank screen
+  if (agentError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
+          <span className="text-2xl">!</span>
+        </div>
+        <h2 className="font-heading text-xl font-semibold mb-2">Ошибка</h2>
+        <p className="text-muted-foreground mb-4">{agentError}</p>
+        <button onClick={() => router.push("/dashboard")} className="text-primary hover:underline cursor-pointer">
+          Вернуться на Dashboard
+        </button>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

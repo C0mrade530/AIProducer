@@ -19,8 +19,6 @@ import { Button } from "@/components/ui/button"
 
 interface SidebarProps {
   profile: { name: string; niche: string } | null
-  workspaceId: string | undefined
-  projectId: string | undefined
   currentStep: number
 }
 
@@ -69,13 +67,14 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
       {!collapsed && profile && (
         <div className="px-4 py-3 border-b border-sidebar-border">
           <p className="text-sm font-medium truncate">{profile.name}</p>
-          <p className="text-xs text-muted-foreground truncate">{profile.niche}</p>
+          {profile.niche && (
+            <p className="text-xs text-muted-foreground truncate">{profile.niche}</p>
+          )}
         </div>
       )}
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto">
-        {/* Dashboard */}
         <NavItem
           href="/dashboard"
           icon={LayoutDashboard}
@@ -84,7 +83,6 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           collapsed={collapsed}
         />
 
-        {/* Agents */}
         {!collapsed && (
           <p className="px-3 pt-4 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Агенты
@@ -113,11 +111,11 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
                     : undefined
               }
               color={agent.color}
+              tooltip={agent.name} // FIX #9: tooltip when collapsed
             />
           )
         })}
 
-        {/* Tasks */}
         {!collapsed && (
           <p className="px-3 pt-4 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Инструменты
@@ -129,6 +127,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           label="Задачи"
           active={pathname === "/tasks"}
           collapsed={collapsed}
+          tooltip="Задачи"
         />
         <NavItem
           href="/settings"
@@ -136,6 +135,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           label="Настройки"
           active={pathname === "/settings"}
           collapsed={collapsed}
+          tooltip="Настройки"
         />
       </nav>
 
@@ -145,6 +145,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           variant="ghost"
           className={cn("w-full justify-start cursor-pointer", collapsed && "justify-center px-0")}
           onClick={handleLogout}
+          title="Выйти"
         >
           <LogOut className="h-4 w-4" />
           {!collapsed && <span className="ml-2">Выйти</span>}
@@ -163,6 +164,7 @@ function NavItem({
   disabled,
   badge,
   color,
+  tooltip,
 }: {
   href: string
   icon: React.ComponentType<{ className?: string }>
@@ -172,10 +174,12 @@ function NavItem({
   disabled?: boolean
   badge?: "done" | "current"
   color?: string
+  tooltip?: string
 }) {
   return (
     <Link
       href={disabled ? "#" : href}
+      title={collapsed ? (tooltip || label) : undefined} // FIX #9: native tooltip
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 cursor-pointer",
         active

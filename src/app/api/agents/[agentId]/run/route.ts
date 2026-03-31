@@ -30,6 +30,63 @@ export async function POST(
     return new Response("Missing message or projectId", { status: 400 })
   }
 
+  // FIX #8: Check subscription limits
+  const { data: projectData } = await supabase
+    .from("projects")
+    .select("workspace_id")
+    .eq("id", projectId)
+    .single()
+
+  if (projectData) {
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("plan, status, current_period_end")
+      .eq("workspace_id", projectData.workspace_id)
+      .single()
+
+    if (!subscription || subscription.status !== "active") {
+      return new Response(
+        JSON.stringify({ error: "Нет активной подписки. Оформите тариф." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    // Check if period expired
+    if (new Date(subscription.current_period_end) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: "Подписка истекла. Продлите тариф." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    // Check monthly usage limits
+    const limits: Record<string, number> = {
+      starter: 30,
+      pro: 100,
+      premium: 300,
+    }
+    const monthlyLimit = limits[subscription.plan] || 30
+
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
+
+    const { count } = await supabase
+      .from("agent_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("started_at", monthStart.toISOString())
+
+    if (count !== null && count >= monthlyLimit) {
+      return new Response(
+        JSON.stringify({
+          error: `Лимит запусков исчерпан (${count}/${monthlyLimit}). Перейдите на более высокий тариф.`,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      )
+    }
+  }
+
   // Get agent definition from DB
   const { data: agent } = await supabase
     .from("agent_definitions")

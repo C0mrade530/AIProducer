@@ -179,7 +179,22 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setProfile((p) => (p ? { ...p, niche: e.target.value } : p))
                 }
+                placeholder="Например: психология, фитнес, маркетинг"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">О себе</label>
+              <textarea
+                value={profile?.bio || ""}
+                onChange={(e) =>
+                  setProfile((p) => (p ? { ...p, bio: e.target.value } : p))
+                }
+                placeholder="Расскажи кратко о своей экспертизе, опыте, кому помогаешь..."
+                className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Эта информация используется AI-агентами для более точных ответов
+              </p>
             </div>
             <Button
               onClick={saveProfile}

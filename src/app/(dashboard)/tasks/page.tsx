@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { ListTodo, Check, Clock, Circle } from "lucide-react"
+import { ListTodo, Check, Plus, X } from "lucide-react"
 
 interface Task {
   id: string
@@ -20,6 +21,10 @@ interface Task {
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const [projectId, setProjectId] = useState("")
+  const [showAdd, setShowAdd] = useState(false)
+  const [newTask, setNewTask] = useState("")
+  const [adding, setAdding] = useState(false)
 
   useEffect(() => {
     loadTasks()
@@ -47,11 +52,13 @@ export default function TasksPage() {
       .single()
 
     if (!project) return
+    setProjectId(project.id)
 
     const { data } = await supabase
       .from("tasks")
       .select("*")
       .eq("project_id", project.id)
+      .order("status", { ascending: true })
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false })
 
@@ -71,20 +78,34 @@ export default function TasksPage() {
 
     setTasks((prev) =>
       prev.map((t) =>
-        t.id === taskId ? { ...t, status, completed_at: status === "completed" ? new Date().toISOString() : null } : t
+        t.id === taskId ? { ...t, status } : t
       )
     )
   }
 
-  const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case "completed":
-        return <Check className="h-4 w-4 text-success" />
-      case "in_progress":
-        return <Clock className="h-4 w-4 text-primary" />
-      default:
-        return <Circle className="h-4 w-4 text-muted-foreground" />
+  // FIX #7: Manual task creation
+  const addTask = async () => {
+    if (!newTask.trim() || !projectId) return
+    setAdding(true)
+
+    const supabase = createClient()
+    const { data } = await supabase
+      .from("tasks")
+      .insert({
+        project_id: projectId,
+        title: newTask.trim(),
+        priority: 3,
+        status: "pending",
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setTasks((prev) => [data, ...prev])
+      setNewTask("")
+      setShowAdd(false)
     }
+    setAdding(false)
   }
 
   const pending = tasks.filter((t) => t.status === "pending")
@@ -93,13 +114,40 @@ export default function TasksPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <ListTodo className="h-6 w-6 text-muted-foreground" />
-        <h1 className="font-heading text-3xl font-bold">Задачи</h1>
-        <Badge variant="muted" className="ml-2">
-          {tasks.filter((t) => t.status !== "completed").length} активных
-        </Badge>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <ListTodo className="h-6 w-6 text-muted-foreground" />
+          <h1 className="font-heading text-3xl font-bold">Задачи</h1>
+          <Badge variant="muted" className="ml-2">
+            {tasks.filter((t) => t.status !== "completed").length} активных
+          </Badge>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAdd(!showAdd)}
+          className="cursor-pointer"
+        >
+          {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {showAdd ? "Отмена" : "Добавить"}
+        </Button>
       </div>
+
+      {/* Add task form */}
+      {showAdd && (
+        <div className="flex gap-2 mb-6 animate-fade-in">
+          <Input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Что нужно сделать?"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") addTask() }}
+          />
+          <Button onClick={addTask} loading={adding} disabled={!newTask.trim()} className="cursor-pointer shrink-0">
+            Добавить
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -111,24 +159,27 @@ export default function TasksPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <ListTodo className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Задачи появятся после работы с агентами
             </p>
+            <Button
+              variant="outline"
+              onClick={() => setShowAdd(true)}
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              Создать задачу вручную
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* In Progress */}
           {inProgress.length > 0 && (
             <TaskSection title="В работе" tasks={inProgress} onStatusChange={updateTaskStatus} />
           )}
-
-          {/* Pending */}
           {pending.length > 0 && (
             <TaskSection title="К выполнению" tasks={pending} onStatusChange={updateTaskStatus} />
           )}
-
-          {/* Completed */}
           {completed.length > 0 && (
             <TaskSection title="Выполнено" tasks={completed} onStatusChange={updateTaskStatus} />
           )}

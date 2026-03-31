@@ -123,6 +123,21 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // FIX #7: Auto-generate tasks from artifact content
+  const tasks = extractTasksFromContent(contentMd, agentCode)
+  if (tasks.length > 0) {
+    await supabase.from("tasks").insert(
+      tasks.map((t) => ({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        status: "pending",
+      }))
+    )
+  }
+
   return NextResponse.json({ artifact })
 }
 
@@ -155,4 +170,83 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: true })
 
   return NextResponse.json({ artifacts: artifacts || [] })
+}
+
+/**
+ * FIX #7: Extract actionable tasks from artifact markdown content
+ * Looks for bullet points, numbered lists, and action items
+ */
+function extractTasksFromContent(
+  content: string,
+  agentCode: string
+): Array<{ title: string; description: string; priority: number }> {
+  const tasks: Array<{ title: string; description: string; priority: number }> = []
+
+  const agentLabels: Record<string, string> = {
+    unpacker: "Распаковка",
+    methodologist: "Продукт",
+    promotion: "Контент",
+    warmup: "Прогрев",
+    leadmagnet: "Воронки",
+    sales: "Продажи",
+    tracker: "Трекинг",
+  }
+
+  const label = agentLabels[agentCode] || agentCode
+
+  // Extract lines that look like action items
+  const lines = content.split("\n")
+  let priority = 2
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Match: - [ ] task, * task, 1. task, - task (but not headers or short lines)
+    const match = trimmed.match(
+      /^(?:[-*]\s*(?:\[.\])?\s*|(?:\d+)[.)]\s*)(.{10,120})$/
+    )
+
+    if (match) {
+      const taskText = match[1].trim()
+      // Skip if it looks like a sub-description or just formatting
+      if (
+        taskText.length < 10 ||
+        taskText.startsWith("http") ||
+        taskText.startsWith("```")
+      )
+        continue
+
+      tasks.push({
+        title: `[${label}] ${taskText}`,
+        description: "",
+        priority,
+      })
+
+      // Only extract up to 10 tasks per artifact
+      if (tasks.length >= 10) break
+    }
+  }
+
+  // If no structured tasks found, create one generic task per agent
+  if (tasks.length === 0) {
+    const genericTasks: Record<string, string> = {
+      unpacker: "Проверить и утвердить результаты распаковки",
+      methodologist: "Проверить структуру продукта и оффер",
+      promotion: "Начать публикацию контента по плану",
+      warmup: "Запустить прогрев по стратегии",
+      leadmagnet: "Создать лид-магнит и настроить воронку",
+      sales: "Отработать скрипт продаж на 3 клиентах",
+      tracker: "Выполнить задачи за эту неделю",
+    }
+
+    if (genericTasks[agentCode]) {
+      tasks.push({
+        title: `[${label}] ${genericTasks[agentCode]}`,
+        description: "Создано автоматически после завершения этапа",
+        priority: 2,
+      })
+    }
+  }
+
+  return tasks
 }

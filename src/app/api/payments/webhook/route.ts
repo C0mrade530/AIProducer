@@ -151,6 +151,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Mark referral as paid (if this user was referred)
+    if (metadata.user_id) {
+      await supabase
+        .from("referrals")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("referred_id", metadata.user_id)
+        .eq("status", "pending")
+    }
+
     // Log usage
     await supabase.from("usage_events").insert({
       workspace_id: workspaceId,

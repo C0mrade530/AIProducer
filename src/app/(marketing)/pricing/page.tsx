@@ -184,6 +184,17 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-8">
+          Оплачивая, вы соглашаетесь с{" "}
+          <Link href="/legal/offer" className="underline hover:text-foreground">
+            офертой
+          </Link>{" "}
+          и{" "}
+          <Link href="/legal/privacy" className="underline hover:text-foreground">
+            политикой конфиденциальности
+          </Link>
+        </p>
       </div>
     </div>
   )

@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
 
-  // Get all users with linked Telegram
+  // Get all users with linked Telegram (including their preferred notification time)
   const { data: telegramUsers } = await supabase
     .from("telegram_accounts")
-    .select("user_id, chat_id")
+    .select("user_id, chat_id, notification_time")
     .not("chat_id", "is", null)
 
   if (!telegramUsers || telegramUsers.length === 0) {
@@ -34,8 +34,24 @@ export async function GET(request: NextRequest) {
 
   let sentCount = 0
 
+  // Current hour in Moscow time (UTC+3)
+  const nowMsk = new Date(Date.now() + 3 * 60 * 60 * 1000)
+  const currentHour = nowMsk.getUTCHours()
+  const currentMinute = nowMsk.getUTCMinutes()
+
   for (const tgUser of telegramUsers) {
     try {
+      // Check if it's the right time for this user
+      // notification_time is stored as "HH:MM", default is "09:00"
+      const userTime = tgUser.notification_time || "09:00"
+      const [targetHour, targetMinute] = userTime.split(":").map(Number)
+
+      // Allow a 30-minute window for the cron to match (cron may run every 30 min)
+      const targetTotal = targetHour * 60 + targetMinute
+      const currentTotal = currentHour * 60 + currentMinute
+      const diff = Math.abs(currentTotal - targetTotal)
+      if (diff > 30 && diff < 1410) continue // skip if not within 30-min window
+
       // Get profile
       const { data: profile } = await supabase
         .from("profiles")

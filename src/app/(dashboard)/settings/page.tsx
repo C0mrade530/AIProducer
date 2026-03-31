@@ -20,6 +20,8 @@ import {
   Check,
   Copy,
   ExternalLink,
+  Gift,
+  Clock,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -42,6 +44,14 @@ export default function SettingsPage() {
   const [linkingTelegram, setLinkingTelegram] = useState(false)
   const [telegramLink, setTelegramLink] = useState("")
   const [copied, setCopied] = useState(false)
+  const [notificationTime, setNotificationTime] = useState("09:00")
+  const [savingTime, setSavingTime] = useState(false)
+  const [referral, setReferral] = useState<{
+    code: string
+    link: string
+    stats: { total: number; paid: number; discount: number; isFreeMonth: boolean }
+  } | null>(null)
+  const [referralCopied, setReferralCopied] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -83,6 +93,29 @@ export default function SettingsPage() {
 
     setProfile(profileData)
     setTelegram(telegramData)
+
+    // Load notification time from telegram_accounts
+    if (telegramData?.linked_at) {
+      const { data: tgSettings } = await supabase
+        .from("telegram_accounts")
+        .select("notification_time")
+        .eq("user_id", user.id)
+        .single()
+      if (tgSettings?.notification_time) {
+        setNotificationTime(tgSettings.notification_time)
+      }
+    }
+
+    // Load referral data
+    try {
+      const refRes = await fetch("/api/referrals")
+      if (refRes.ok) {
+        const refData = await refRes.json()
+        setReferral(refData)
+      }
+    } catch {
+      // Non-critical
+    }
   }
 
   const saveProfile = async () => {
@@ -140,6 +173,29 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(telegramLink)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const saveNotificationTime = async () => {
+    setSavingTime(true)
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from("telegram_accounts")
+        .update({ notification_time: notificationTime })
+        .eq("user_id", user.id)
+    }
+    setSavingTime(false)
+  }
+
+  const copyReferralLink = () => {
+    if (referral?.link) {
+      navigator.clipboard.writeText(referral.link)
+      setReferralCopied(true)
+      setTimeout(() => setReferralCopied(false), 2000)
+    }
   }
 
   const planLabels: Record<string, string> = {
@@ -207,27 +263,57 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             {telegram?.linked_at ? (
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-cyan-500" />
+              <div className="space-y-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                    <Check className="h-5 w-5 text-cyan-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      @{telegram.username || "Привязан"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Привязан{" "}
+                      {new Date(telegram.linked_at).toLocaleDateString("ru-RU")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={generateTelegramLink}
+                    className="ml-auto cursor-pointer"
+                  >
+                    Перепривязать
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-medium">
-                    @{telegram.username || "Привязан"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Привязан{" "}
-                    {new Date(telegram.linked_at).toLocaleDateString("ru-RU")}
-                  </p>
+                {/* Notification time setting */}
+              <div className="mt-4 pt-4 border-t space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <label className="text-sm font-medium">Время ежедневной мотивации</label>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={generateTelegramLink}
-                  className="ml-auto cursor-pointer"
-                >
-                  Перепривязать
-                </Button>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="time"
+                    value={notificationTime}
+                    onChange={(e) => setNotificationTime(e.target.value)}
+                    className="w-32"
+                  />
+                  <span className="text-xs text-muted-foreground">по Москве (МСК)</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={saveNotificationTime}
+                    loading={savingTime}
+                    className="cursor-pointer"
+                  >
+                    Сохранить
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Каждый день в это время бот пришлёт мотивацию и план задач
+                </p>
+              </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -331,6 +417,85 @@ export default function SettingsPage() {
                 <Link href="/pricing">
                   <Button className="cursor-pointer">Выбрать тариф</Button>
                 </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {/* Referral Program */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Gift className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-lg">Реферальная программа</CardTitle>
+            </div>
+            <CardDescription>
+              Приглашай друзей и получай скидки на подписку
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {referral ? (
+              <div className="space-y-4">
+                {/* How it works */}
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium">Как это работает:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>1 оплативший друг = <b>скидка 20%</b> на следующий месяц</li>
+                    <li>5 друзей = <b>бесплатный месяц</b></li>
+                    <li>Скидки суммируются!</li>
+                  </ul>
+                </div>
+
+                {/* Referral link */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">
+                    Твоя реферальная ссылка:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input value={referral.link} readOnly className="text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyReferralLink}
+                      className="shrink-0 cursor-pointer"
+                    >
+                      {referralCopied ? (
+                        <Check className="h-4 w-4 text-success" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold">{referral.stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Приглашённых</p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold">{referral.stats.paid}</p>
+                    <p className="text-xs text-muted-foreground">Оплативших</p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      {referral.stats.isFreeMonth ? "FREE" : `${referral.stats.discount}%`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Скидка</p>
+                  </div>
+                </div>
+
+                {referral.stats.isFreeMonth && (
+                  <div className="bg-success/10 border border-success/20 rounded-lg p-3 text-center">
+                    <p className="text-sm font-medium text-success">
+                      Следующий месяц бесплатно!
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-4">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </CardContent>

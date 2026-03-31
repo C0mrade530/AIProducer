@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +16,8 @@ const STEPS_PREVIEW = [
 ]
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get("ref")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -60,6 +63,23 @@ export default function RegisterPage() {
       setError("Ошибка сохранения профиля. Попробуй ещё раз.")
       setLoading(false)
       return
+    }
+
+    // 3. Store referral if came from referral link
+    if (refCode) {
+      const { data: referrer } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", refCode.toUpperCase())
+        .single()
+
+      if (referrer && referrer.id !== user.id) {
+        await supabase.from("referrals").insert({
+          referrer_id: referrer.id,
+          referred_id: user.id,
+          status: "pending",
+        })
+      }
     }
 
     const { data: workspace, error: wsError } = await supabase.from("workspaces").insert({
@@ -167,6 +187,16 @@ export default function RegisterPage() {
               Уже есть аккаунт?{" "}
               <Link href="/login" className="text-primary hover:underline cursor-pointer">
                 Войти
+              </Link>
+            </p>
+            <p className="text-center text-[11px] text-muted-foreground mt-3">
+              Регистрируясь, ты соглашаешься с{" "}
+              <Link href="/legal/offer" className="underline hover:text-foreground">
+                офертой
+              </Link>{" "}
+              и{" "}
+              <Link href="/legal/privacy" className="underline hover:text-foreground">
+                политикой конфиденциальности
               </Link>
             </p>
           </CardContent>

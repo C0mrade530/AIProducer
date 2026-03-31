@@ -1,38 +1,48 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import Link from "next/link"
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState("")
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (password.length < 6) {
+      setError("Пароль должен быть не менее 6 символов")
+      return
+    }
     setLoading(true)
     setError("")
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signUp({
       email,
+      password,
       options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         data: { name },
       },
     })
 
     if (error) {
-      setError("Не удалось отправить ссылку. Попробуйте ещё раз.")
+      if (error.message.includes("already registered")) {
+        setError("Этот email уже зарегистрирован. Попробуйте войти.")
+      } else {
+        setError(error.message)
+      }
     } else {
-      setSent(true)
+      router.push("/onboarding")
     }
     setLoading(false)
   }
@@ -53,54 +63,55 @@ export default function RegisterPage() {
           <CardHeader className="text-center">
             <CardTitle>Создать аккаунт</CardTitle>
             <CardDescription>
-              Начните создавать свой онлайн-продукт с AI
+              Начни создавать свой онлайн-продукт с AI
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {sent ? (
-              <div className="text-center space-y-4 py-4">
-                <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-                  <ArrowRight className="h-8 w-8 text-success" />
-                </div>
-                <div>
-                  <p className="font-medium text-lg">Ссылка отправлена!</p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Проверьте почту <span className="font-medium text-foreground">{email}</span>
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
                 <Input
                   type="text"
-                  placeholder="Ваше имя"
+                  placeholder="Твоё имя"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   autoFocus
                 />
+              </div>
+              <div>
                 <Input
                   type="email"
-                  placeholder="your@email.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
                 />
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
-                <Button type="submit" className="w-full" size="lg" loading={loading}>
-                  Зарегистрироваться
-                </Button>
-                <p className="text-center text-sm text-muted-foreground">
-                  Уже есть аккаунт?{" "}
-                  <Link href="/login" className="text-primary hover:underline cursor-pointer">
-                    Войти
-                  </Link>
-                </p>
-              </form>
-            )}
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Пароль (минимум 6 символов)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  minLength={6}
+                />
+              </div>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+              <Button type="submit" className="w-full" size="lg" loading={loading}>
+                Зарегистрироваться
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Уже есть аккаунт?{" "}
+                <Link href="/login" className="text-primary hover:underline cursor-pointer">
+                  Войти
+                </Link>
+              </p>
+            </form>
           </CardContent>
         </Card>
       </div>

@@ -9,30 +9,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Sparkles } from "lucide-react"
 import Link from "next/link"
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (password !== confirmPassword) {
+      setError("Пароли не совпадают")
+      return
+    }
+    if (password.length < 6) {
+      setError("Пароль должен быть не менее 6 символов")
+      return
+    }
     setLoading(true)
     setError("")
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { error } = await supabase.auth.updateUser({ password })
 
     if (error) {
-      if (error.message.includes("Invalid login")) {
-        setError("Неверный email или пароль")
-      } else {
-        setError(error.message)
-      }
+      setError("Не удалось сменить пароль. Попробуйте запросить ссылку заново.")
     } else {
       router.push("/dashboard")
     }
@@ -53,48 +54,36 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Войти в аккаунт</CardTitle>
+            <CardTitle>Новый пароль</CardTitle>
             <CardDescription>
-              Введи email и пароль
+              Введи новый пароль для аккаунта
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                  autoComplete="email"
-                />
-              </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Пароль"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
+            <form onSubmit={handleReset} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Новый пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoFocus
+                minLength={6}
+              />
+              <Input
+                type="password"
+                placeholder="Подтвердите пароль"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+              />
               {error && (
                 <p className="text-sm text-destructive">{error}</p>
               )}
               <Button type="submit" className="w-full" size="lg" loading={loading}>
-                Войти
+                Сохранить пароль
               </Button>
-              <div className="flex items-center justify-between text-sm">
-                <Link href="/forgot-password" className="text-primary hover:underline cursor-pointer">
-                  Забыли пароль?
-                </Link>
-                <Link href="/register" className="text-primary hover:underline cursor-pointer">
-                  Регистрация
-                </Link>
-              </div>
             </form>
           </CardContent>
         </Card>

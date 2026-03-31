@@ -12,24 +12,24 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login")
 
-  // Get profile
+  // Get profile — only serializable fields
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("name, niche")
     .eq("id", user.id)
     .single()
 
   // Get workspace
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("*")
+    .select("id")
     .eq("owner_id", user.id)
     .single()
 
   // Get project
   const { data: project } = await supabase
     .from("projects")
-    .select("*")
+    .select("id, current_step")
     .eq("workspace_id", workspace?.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -38,7 +38,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen bg-background">
       <Sidebar
-        profile={profile}
+        profile={profile ? { name: profile.name || "", niche: profile.niche || "" } : null}
         workspaceId={workspace?.id}
         projectId={project?.id}
         currentStep={project?.current_step || 1}

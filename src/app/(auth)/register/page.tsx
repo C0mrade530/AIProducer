@@ -13,7 +13,6 @@ export default function RegisterPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -30,9 +29,6 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { name },
-      },
     })
 
     if (error) {
@@ -70,21 +66,12 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <Input
-                  type="text"
-                  placeholder="Твоё имя"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              <div>
-                <Input
                   type="email"
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoFocus
                   autoComplete="email"
                 />
               </div>

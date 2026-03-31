@@ -80,7 +80,7 @@ export default function DashboardLayout({
         profile={profile}
         currentStep={currentStep}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto md:pt-0 pt-14">
         {children}
       </main>
     </div>

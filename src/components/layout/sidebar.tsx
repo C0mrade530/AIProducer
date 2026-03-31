@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Menu,
+  X,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -26,6 +28,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -33,16 +36,51 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
     router.push("/")
   }
 
+  const closeMobile = () => setMobileOpen(false)
+
   return (
-    <aside
-      className={cn(
-        "flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+    <>
+      {/* Mobile header with hamburger */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-background border-b flex items-center px-4">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="h-9 w-9 rounded-md hover:bg-muted flex items-center justify-center cursor-pointer"
+          aria-label="Открыть меню"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <Link href="/dashboard" className="flex items-center gap-2 ml-3 cursor-pointer">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="font-heading text-lg font-bold">AIProducer</span>
+        </Link>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={closeMobile}
+        />
       )}
-    >
+
+      {/* Sidebar — desktop: always visible, mobile: drawer */}
+      <aside
+        className={cn(
+          "flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
+          // Desktop
+          "hidden md:flex",
+          collapsed ? "w-16" : "w-64",
+          // Mobile drawer
+          "md:relative fixed top-0 left-0 bottom-0 z-50",
+          mobileOpen ? "flex" : "hidden md:flex",
+          "w-64" // Mobile always full width
+        )}
+      >
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer" onClick={closeMobile}>
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
@@ -50,12 +88,15 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
             <span className="font-heading text-lg font-bold">AIProducer</span>
           )}
         </Link>
+        {/* Close button for mobile, collapse for desktop */}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => (mobileOpen ? closeMobile() : setCollapsed(!collapsed))}
           className="h-7 w-7 rounded-md hover:bg-sidebar-border/50 flex items-center justify-center cursor-pointer transition-colors"
-          aria-label={collapsed ? "Развернуть" : "Свернуть"}
+          aria-label={mobileOpen ? "Закрыть" : collapsed ? "Развернуть" : "Свернуть"}
         >
-          {collapsed ? (
+          {mobileOpen ? (
+            <X className="h-4 w-4" />
+          ) : collapsed ? (
             <ChevronRight className="h-4 w-4" />
           ) : (
             <ChevronLeft className="h-4 w-4" />
@@ -81,6 +122,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           label="Обзор"
           active={pathname === "/dashboard"}
           collapsed={collapsed}
+          onMobileClick={closeMobile}
         />
 
         {!collapsed && (
@@ -111,7 +153,8 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
                     : undefined
               }
               color={agent.color}
-              tooltip={agent.name} // FIX #9: tooltip when collapsed
+              tooltip={agent.name}
+              onMobileClick={closeMobile}
             />
           )
         })}
@@ -128,6 +171,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           active={pathname === "/tasks"}
           collapsed={collapsed}
           tooltip="Задачи"
+          onMobileClick={closeMobile}
         />
         <NavItem
           href="/settings"
@@ -136,6 +180,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
           active={pathname === "/settings"}
           collapsed={collapsed}
           tooltip="Настройки"
+          onMobileClick={closeMobile}
         />
       </nav>
 
@@ -144,7 +189,10 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
         <Button
           variant="ghost"
           className={cn("w-full justify-start cursor-pointer", collapsed && "justify-center px-0")}
-          onClick={handleLogout}
+          onClick={() => {
+            closeMobile()
+            handleLogout()
+          }}
           title="Выйти"
         >
           <LogOut className="h-4 w-4" />
@@ -152,6 +200,7 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
         </Button>
       </div>
     </aside>
+    </>
   )
 }
 
@@ -165,6 +214,7 @@ function NavItem({
   badge,
   color,
   tooltip,
+  onMobileClick,
 }: {
   href: string
   icon: React.ComponentType<{ className?: string }>
@@ -175,11 +225,13 @@ function NavItem({
   badge?: "done" | "current"
   color?: string
   tooltip?: string
+  onMobileClick?: () => void
 }) {
   return (
     <Link
       href={disabled ? "#" : href}
-      title={collapsed ? (tooltip || label) : undefined} // FIX #9: native tooltip
+      onClick={onMobileClick}
+      title={collapsed ? (tooltip || label) : undefined}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 cursor-pointer",
         active

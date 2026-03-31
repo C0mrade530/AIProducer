@@ -237,9 +237,9 @@ export function AgentChat({
   return (
     <div className="flex h-full">
       {/* Chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Agent header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b">
+        <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b">
           <div
             className={cn(
               "h-10 w-10 rounded-xl flex items-center justify-center",
@@ -273,7 +273,7 @@ export function AgentChat({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 space-y-4 md:space-y-6">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
               <div
@@ -338,7 +338,7 @@ export function AgentChat({
                   <Sparkles className={cn("h-4 w-4", agentConfig.color)} />
                 )}
               </div>
-              <div className="flex flex-col gap-1 max-w-[75%]">
+              <div className="flex flex-col gap-1 max-w-[85%] md:max-w-[75%]">
                 <div
                   className={cn(
                     "rounded-2xl px-4 py-3 text-sm leading-relaxed",
@@ -398,7 +398,7 @@ export function AgentChat({
         </div>
 
         {/* Input */}
-        <div className="border-t px-6 py-4">
+        <div className="border-t px-4 md:px-6 py-3 md:py-4 pb-safe">
           <div className="relative max-w-3xl mx-auto">
             <Textarea
               value={input}
@@ -426,9 +426,22 @@ export function AgentChat({
         </div>
       </div>
 
-      {/* Artifacts panel */}
+      {/* Artifacts panel — desktop: sidebar, mobile: modal overlay */}
       {showArtifacts && (
-        <div className="w-96 border-l bg-card overflow-y-auto flex flex-col">
+        <>
+          {/* Mobile overlay */}
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={() => setShowArtifacts(false)}
+          />
+
+          <div className={cn(
+            "border-l bg-card overflow-y-auto flex flex-col",
+            // Desktop: sidebar
+            "md:w-96 md:relative md:z-0",
+            // Mobile: modal overlay from right
+            "fixed top-0 right-0 bottom-0 w-full max-w-sm z-50"
+          )}>
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -509,6 +522,7 @@ export function AgentChat({
             </div>
           )}
         </div>
+        </>
       )}
 
       {/* Save artifact modal */}

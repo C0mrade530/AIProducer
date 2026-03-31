@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -53,6 +53,8 @@ export function AgentChat({
   artifacts: initialArtifacts,
 }: AgentChatProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isWelcome = searchParams.get("welcome") === "1"
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
@@ -285,34 +287,66 @@ export function AgentChat({
               <h3 className="font-heading text-xl font-semibold mb-2">
                 {agentConfig.name}
               </h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                {agentConfig.description}. Начните диалог — напишите сообщение
-                ниже.
-              </p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {agentCode === "unpacker" && (
-                  <>
-                    <QuickAction
-                      text="Привет, давай начнём"
-                      onClick={() => setInput("Привет! Давай начнём распаковку.")}
-                    />
-                    <QuickAction
-                      text="Расскажу о себе"
-                      onClick={() => setInput("Привет! Я готов рассказать о себе и своей экспертизе.")}
-                    />
-                  </>
-                )}
-                {agentCode !== "unpacker" && (
-                  <QuickAction
-                    text="Начать работу"
-                    onClick={() =>
-                      setInput(
-                        "Привет! Давай начнём. Используй результаты предыдущих этапов."
-                      )
-                    }
-                  />
-                )}
-              </div>
+
+              {isWelcome && agentCode === "unpacker" ? (
+                <>
+                  <p className="text-muted-foreground text-sm mb-2">
+                    Первый шаг — распаковка твоей экспертности.
+                  </p>
+                  <p className="text-muted-foreground text-sm mb-5">
+                    Агент задаст вопросы о тебе, твоей нише и клиентах. Просто отвечай честно — он сделает остальное.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setInput("Привет! Давай начнём распаковку.")
+                      // Auto-send after setting input
+                      setTimeout(() => {
+                        const btn = document.querySelector("[data-send-btn]") as HTMLButtonElement
+                        btn?.click()
+                      }, 100)
+                    }}
+                    size="lg"
+                    className="cursor-pointer mb-3"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Начать распаковку
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    Занимает ~30 минут. Можно продолжить позже.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {agentConfig.description}. Начни диалог — напиши сообщение ниже.
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {agentCode === "unpacker" && (
+                      <>
+                        <QuickAction
+                          text="Привет, давай начнём"
+                          onClick={() => setInput("Привет! Давай начнём распаковку.")}
+                        />
+                        <QuickAction
+                          text="Расскажу о себе"
+                          onClick={() => setInput("Привет! Я готов рассказать о себе и своей экспертизе.")}
+                        />
+                      </>
+                    )}
+                    {agentCode !== "unpacker" && (
+                      <QuickAction
+                        text="Начать работу"
+                        onClick={() =>
+                          setInput(
+                            "Привет! Давай начнём. Используй результаты предыдущих этапов."
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -412,6 +446,7 @@ export function AgentChat({
               onClick={handleSend}
               disabled={!input.trim() || isStreaming}
               className="absolute right-2 bottom-2 h-9 w-9 rounded-lg cursor-pointer"
+              data-send-btn
             >
               <Send className="h-4 w-4" />
             </Button>

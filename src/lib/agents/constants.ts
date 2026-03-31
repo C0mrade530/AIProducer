@@ -19,6 +19,8 @@ export interface AgentConfig {
   borderColor: string
   step: number
   description: string
+  /** What this agent produces (shown on dashboard) */
+  output: string
 }
 
 export const AGENTS: AgentConfig[] = [
@@ -32,6 +34,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-violet-500/20",
     step: 1,
     description: "Раскрой свою экспертность и позиционирование",
+    output: "Документ распаковки",
   },
   {
     code: "methodologist",
@@ -43,6 +46,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-blue-500/20",
     step: 2,
     description: "Создай структуру и оффер продукта",
+    output: "Продуктовый паспорт",
   },
   {
     code: "promotion",
@@ -54,6 +58,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-emerald-500/20",
     step: 3,
     description: "Контент-план, темы и стратегия продвижения",
+    output: "Контент-план",
   },
   {
     code: "warmup",
@@ -65,6 +70,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-orange-500/20",
     step: 4,
     description: "Прогрей аудиторию к покупке",
+    output: "Стратегия прогрева",
   },
   {
     code: "leadmagnet",
@@ -76,6 +82,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-pink-500/20",
     step: 5,
     description: "Создай лид-магниты и воронки",
+    output: "Карта воронок",
   },
   {
     code: "sales",
@@ -87,6 +94,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-amber-500/20",
     step: 6,
     description: "Скрипты и стратегии high-ticket продаж",
+    output: "Продажный пакет",
   },
   {
     code: "tracker",
@@ -98,6 +106,7 @@ export const AGENTS: AgentConfig[] = [
     borderColor: "border-cyan-500/20",
     step: 7,
     description: "Контроль прогресса и мотивация",
+    output: "План действий",
   },
 ]
 

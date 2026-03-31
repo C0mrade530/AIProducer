@@ -3,20 +3,24 @@
  *
  * АРХИТЕКТУРА ЭКОНОМИИ ТОКЕНОВ:
  *
- * Фаза 1 (первое сообщение в run):
- *   - Полный system prompt из файла (до 90KB) загружается ОДИН раз
- *   - Pipeline context из предыдущих агентов
- *   - Агент "усваивает" инструкции
+ * === PROMPT CACHING (NEW) ===
+ *   Статический промпт агента (до 90KB) отправляется как ПЕРВЫЙ system message.
+ *   Anthropic API автоматически кэширует длинные префиксы.
+ *   Все пользователи, обращающиеся к одному агенту, переиспользуют кэш.
+ *   Экономия: ~90% стоимости на кэшированных токенах.
  *
- * Фаза 2 (последующие сообщения):
- *   - Краткое напоминание роли (~200 токенов) вместо полного промпта
- *   - История чата уже содержит контекст
- *   - Экономия ~80% входных токенов на каждое сообщение
+ * === ДВУХФАЗНАЯ СИСТЕМА ===
+ *   Фаза 1 (первое сообщение в run):
+ *     Полный system prompt из файла + pipeline context
+ *
+ *   Фаза 2 (последующие сообщения):
+ *     Краткое напоминание роли (~200 токенов)
+ *     Экономия: ~80% входных токенов
  *
  * Pipeline передача:
- *   - Артефакты предыдущих агентов передаются как structured JSON
- *   - Каждый агент получает ВСЕ предыдущие артефакты
- *   - Порядок: unpacker → methodologist → promotion → warmup → leadmagnet → sales → tracker
+ *   Артефакты предыдущих агентов передаются как structured JSON
+ *   Каждый агент получает ВСЕ предыдущие артефакты
+ *   Порядок: unpacker → methodologist → promotion → warmup → leadmagnet → sales → tracker
  */
 
 export interface AgentMessage {
@@ -50,6 +54,10 @@ export function selectModel(isArtifactGeneration: boolean): ModelKey {
 
 /**
  * Streaming вызов для чат-интерфейса
+ *
+ * Поддерживает prompt caching через разделение system messages:
+ * - Первый system message (длинный статический промпт) → кэшируется Anthropic
+ * - Второй system message (динамический контекст) → не кэшируется
  */
 export async function streamAgent(
   messages: AgentMessage[],
@@ -71,7 +79,7 @@ export async function streamAgent(
   const response = await fetch("https://api.cometapi.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -113,7 +121,7 @@ export async function callAgent(
   const response = await fetch("https://api.cometapi.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -164,7 +172,13 @@ const ROLE_REMINDERS: Record<string, string> = {
 }
 
 /**
- * Построить контекст для агента — ДВУХФАЗНАЯ СИСТЕМА
+ * Построить контекст для агента — ДВУХФАЗНАЯ СИСТЕМА С PROMPT CACHING
+ *
+ * Prompt caching работает так:
+ * - Статический промпт (одинаковый для всех пользователей) идёт ПЕРВЫМ system message
+ * - Anthropic кэширует длинные префиксы автоматически
+ * - Динамический контекст (артефакты, профиль) идёт ВТОРЫМ system message
+ * - Это позволяет кэшировать 15-90KB промпта между пользователями
  *
  * @param isFirstMessage - true = Фаза 1 (полный промпт), false = Фаза 2 (краткое напоминание)
  */
@@ -180,47 +194,50 @@ export function buildAgentContext(
   const messages: AgentMessage[] = []
 
   if (isFirstMessage) {
-    // ═══ ФАЗА 1: Полный промпт ═══
-    let systemContent = fullSystemPrompt
+    // ═══ ФАЗА 1: Полный промпт с prompt caching ═══
 
-    // Pipeline instructions
+    // SYSTEM MESSAGE 1: Статический промпт (КЭШИРУЕТСЯ)
+    // Этот промпт одинаковый для всех пользователей одного агента
+    // Anthropic автоматически кэширует длинные префиксы
+    let staticPrompt = fullSystemPrompt
     if (pipelineInstructions) {
-      systemContent += "\n\n" + pipelineInstructions
+      staticPrompt += "\n\n" + pipelineInstructions
     }
-
-    // Knowledge files
+    // Knowledge files are per-agent, not per-user, so they're cacheable too
     if (knowledgeTexts.length > 0) {
-      systemContent +=
+      staticPrompt +=
         "\n\n## Базовые знания агента\n\n" +
         knowledgeTexts.join("\n\n---\n\n")
     }
+    staticPrompt += "\n\nОтвечай на русском языке. Будь конкретен, структурирован и полезен. Общайся на ты."
 
-    // User profile
+    messages.push({ role: "system", content: staticPrompt })
+
+    // SYSTEM MESSAGE 2: Динамический контекст (НЕ кэшируется)
+    // Уникальный для каждого пользователя
+    let dynamicContext = ""
+
     if (userProfile) {
-      systemContent += `\n\n## Профиль эксперта\nИмя: ${userProfile.name}\nНиша: ${userProfile.niche}\nО себе: ${userProfile.bio}`
+      dynamicContext += `## Профиль эксперта\nИмя: ${userProfile.name}\nНиша: ${userProfile.niche}\nО себе: ${userProfile.bio}`
     }
 
-    // Previous artifacts (pipeline context)
     if (previousArtifacts.length > 0) {
-      systemContent += "\n\n## Результаты предыдущих этапов (артефакты)\n\n"
-      systemContent += previousArtifacts
+      dynamicContext += "\n\n## Результаты предыдущих этапов (артефакты)\n\n"
+      dynamicContext += previousArtifacts
         .map((a) => `### ${a.title} [${a.type}]\n${a.content_md}`)
         .join("\n\n---\n\n")
     }
 
-    systemContent +=
-      "\n\nОтвечай на русском языке. Будь конкретен, структурирован и полезен. Общайся на ты."
-
-    messages.push({ role: "system", content: systemContent })
+    if (dynamicContext) {
+      messages.push({ role: "system", content: dynamicContext })
+    }
   } else {
     // ═══ ФАЗА 2: Краткое напоминание ═══
     // ~200 токенов вместо ~5000-20000
-    const reminder = ROLE_REMINDERS[agentCode] || "Продолжай работу в своей роли."
+    const reminder =
+      ROLE_REMINDERS[agentCode] || "Продолжай работу в своей роли."
 
     let systemContent = reminder
-
-    // В фазе 2 добавляем только НОВЫЕ артефакты (если появились с последнего сообщения)
-    // Основной контекст уже в истории чата
 
     if (userProfile) {
       systemContent += `\nЭксперт: ${userProfile.name}, ниша: ${userProfile.niche}`
@@ -251,7 +268,9 @@ export const PIPELINE_ORDER = [
  * Получить коды предыдущих агентов в pipeline
  */
 export function getPreviousAgentCodes(agentCode: string): string[] {
-  const index = PIPELINE_ORDER.indexOf(agentCode as typeof PIPELINE_ORDER[number])
+  const index = PIPELINE_ORDER.indexOf(
+    agentCode as (typeof PIPELINE_ORDER)[number]
+  )
   if (index <= 0) return []
   return [...PIPELINE_ORDER.slice(0, index)]
 }

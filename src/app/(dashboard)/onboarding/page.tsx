@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sparkles, ArrowRight } from "lucide-react"
 
+/**
+ * Onboarding page — fallback for users who registered before
+ * the unified registration flow. New users skip this entirely.
+ */
 export default function OnboardingPage() {
   const router = useRouter()
   const [name, setName] = useState("")
@@ -15,7 +19,6 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    // Check if already onboarded
     checkOnboarding()
   }, [])
 
@@ -44,57 +47,55 @@ export default function OnboardingPage() {
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError("Сессия истекла. Войдите заново."); setLoading(false); return }
+    if (!user) { setError("Сессия истекла. Войди заново."); setLoading(false); return }
 
-    // Step 1: Update profile
     const { error: profileError } = await supabase.from("profiles").update({
       name: name.trim(),
       onboarding_completed: true,
     }).eq("id", user.id)
 
     if (profileError) {
-      console.error("Profile update error:", profileError)
-      setError("Ошибка сохранения. Попробуйте ещё раз.")
+      setError("Ошибка сохранения. Попробуй ещё раз.")
       setLoading(false)
       return
     }
 
-    // Step 2: Create workspace
-    const { data: workspace, error: wsError } = await supabase.from("workspaces").insert({
-      owner_id: user.id,
-      title: name.trim(),
-      niche: "",
-    }).select("id").single()
+    // Create workspace if doesn't exist
+    const { data: existingWs } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_id", user.id)
+      .single()
 
-    if (wsError || !workspace) {
-      console.error("Workspace error:", wsError)
-      // Already has workspace? Go to dashboard
-      router.push("/dashboard?tour=1")
-      return
+    if (!existingWs) {
+      const { data: workspace } = await supabase.from("workspaces").insert({
+        owner_id: user.id,
+        title: name.trim(),
+        niche: "",
+      }).select("id").single()
+
+      if (workspace) {
+        await Promise.all([
+          supabase.from("workspace_members").insert({
+            workspace_id: workspace.id,
+            user_id: user.id,
+            role: "owner",
+          }),
+          supabase.from("projects").insert({
+            workspace_id: workspace.id,
+            name: "Мой первый продукт",
+          }),
+          supabase.from("subscriptions").insert({
+            workspace_id: workspace.id,
+            plan: "starter",
+            status: "active",
+          }),
+        ])
+      }
     }
 
-    // Step 3: Add member
-    await supabase.from("workspace_members").insert({
-      workspace_id: workspace.id,
-      user_id: user.id,
-      role: "owner",
-    })
-
-    // Step 4: Create project
-    await supabase.from("projects").insert({
-      workspace_id: workspace.id,
-      name: "Мой первый продукт",
-    })
-
-    // Step 5: Create subscription
-    await supabase.from("subscriptions").insert({
-      workspace_id: workspace.id,
-      plan: "starter",
-      status: "active",
-    })
-
-    // Navigate with tour
-    window.location.href = "/dashboard?tour=1"
+    // Go straight to first agent
+    window.location.href = "/agent/unpacker?welcome=1"
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -143,7 +144,7 @@ export default function OnboardingPage() {
             size="xl"
             className="w-full cursor-pointer"
           >
-            Начать
+            Начать работу
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

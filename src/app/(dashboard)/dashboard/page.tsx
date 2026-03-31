@@ -129,8 +129,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {AGENTS.map((agent) => {
+      {/* Pipeline explanation */}
+      {completedCount === 0 && (
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/10 rounded-xl">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Как это работает:</span>{" "}
+            каждый агент создаёт документ, который автоматически передаётся следующему.
+            Пройди все 7 шагов — и у тебя будет готовая стратегия запуска продукта.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-0">
+        {AGENTS.map((agent, index) => {
           const isCompleted = completedAgents.has(agent.code)
           const isCurrent = agent.step === currentStep
           const isLocked = agent.step > currentStep + 1
@@ -142,6 +153,7 @@ export default function DashboardPage() {
               isCompleted={isCompleted}
               isCurrent={isCurrent}
               isLocked={isLocked}
+              isLast={index === AGENTS.length - 1}
             />
           )
         })}

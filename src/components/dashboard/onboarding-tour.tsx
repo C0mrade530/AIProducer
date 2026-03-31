@@ -6,76 +6,38 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
   Sparkles,
-  Target,
-  TrendingUp,
-  MessageSquare,
-  Magnet,
-  DollarSign,
-  CheckCircle2,
   ArrowRight,
-  X,
+  MessageSquare,
+  FileText,
+  Zap,
 } from "lucide-react"
 
 const TOUR_STEPS = [
   {
     title: "Добро пожаловать в AIProducer!",
-    description: "Это твой личный AI-продюсер. 7 умных агентов помогут создать и продать онлайн-продукт. Давай я покажу, как всё устроено.",
+    description:
+      "7 AI-агентов помогут тебе создать и запустить онлайн-продукт. Каждый агент делает свою часть работы, а результаты автоматически передаются следующему.",
     icon: Sparkles,
     color: "text-primary",
     bg: "bg-primary/10",
   },
   {
-    title: "1. Распаковщик",
-    description: "Первый агент раскроет твою экспертность: кто ты, чем уникален, какие боли решаешь. Это фундамент для всего остального.",
-    icon: Sparkles,
-    color: "text-violet-500",
-    bg: "bg-violet-500/10",
-  },
-  {
-    title: "2. Методолог",
-    description: "На основе распаковки создаст структуру продукта: оффер, модули, тарифы. Ты получишь готовый продуктовый паспорт.",
-    icon: Target,
+    title: "Как это работает",
+    description:
+      "Ты общаешься с агентом в чате. Он задаёт вопросы, ты отвечаешь. В конце агент создаёт документ (артефакт) — ты сохраняешь его и переходишь к следующему агенту.",
+    icon: MessageSquare,
     color: "text-blue-500",
     bg: "bg-blue-500/10",
+    tips: [
+      { icon: MessageSquare, text: "Отвечай подробно — агент подстроится" },
+      { icon: FileText, text: "Сохраняй артефакты — они нужны другим агентам" },
+      { icon: Zap, text: "Весь процесс занимает 2-3 часа" },
+    ],
   },
   {
-    title: "3. Продвижение",
-    description: "Сгенерирует 30+ тем для Reels, контент-план, hooks и CTA. Больше не нужно ломать голову, что постить.",
-    icon: TrendingUp,
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10",
-  },
-  {
-    title: "4. Прогревщик",
-    description: "Выстроит стратегию прогрева аудитории: Stories, посты, сюжетные линии. Чтобы к моменту продажи люди уже хотели купить.",
-    icon: MessageSquare,
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
-  },
-  {
-    title: "5. Лид-магниты",
-    description: "Создаст элитные лид-магниты и воронки: от первого касания до заявки. Бесплатные материалы, которые продают за тебя.",
-    icon: Magnet,
-    color: "text-pink-500",
-    bg: "bg-pink-500/10",
-  },
-  {
-    title: "6. Продажник",
-    description: "Напишет скрипты продаж, обработку возражений, follow-up. Для созвонов, переписки и high-ticket.",
-    icon: DollarSign,
-    color: "text-amber-500",
-    bg: "bg-amber-500/10",
-  },
-  {
-    title: "7. Трекер",
-    description: "Будет следить за твоим прогрессом, создавать задачи и напоминать через Telegram. Чтобы ты не забросил на полпути.",
-    icon: CheckCircle2,
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
-  },
-  {
-    title: "Готов? Начни с Распаковщика!",
-    description: "Каждый следующий агент использует результаты предыдущего. Поэтому начинаем с распаковки — это займёт ~30 минут, и ты удивишься, сколько узнаешь о себе.",
+    title: "Начнём с Распаковщика",
+    description:
+      "Первый агент раскроет твою экспертность — кто ты, чем уникален, какие боли решаешь. Это фундамент для всего. Просто напиши «Привет» и следуй за агентом.",
     icon: ArrowRight,
     color: "text-primary",
     bg: "bg-primary/10",
@@ -89,7 +51,6 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Animate in
     const t = setTimeout(() => setVisible(true), 300)
     return () => clearTimeout(t)
   }, [])
@@ -110,6 +71,7 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
 
   const handleSkip = () => {
     onComplete()
+    router.push("/agent/unpacker")
   }
 
   return (
@@ -130,7 +92,12 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
 
         {/* Content */}
         <div className="p-8 text-center">
-          <div className={cn("h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-5", current.bg)}>
+          <div
+            className={cn(
+              "h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-5",
+              current.bg
+            )}
+          >
             <Icon className={cn("h-8 w-8", current.color)} />
           </div>
 
@@ -140,6 +107,21 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
           <p className="text-muted-foreground leading-relaxed">
             {current.description}
           </p>
+
+          {/* Tips for step 2 */}
+          {"tips" in current && current.tips && (
+            <div className="mt-5 space-y-2.5 text-left">
+              {current.tips.map((tip, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 bg-muted/50 rounded-lg px-4 py-2.5"
+                >
+                  <tip.icon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm">{tip.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -163,7 +145,11 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
                   key={i}
                   className={cn(
                     "h-1.5 rounded-full transition-all duration-300",
-                    i === step ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/20"
+                    i === step
+                      ? "w-6 bg-primary"
+                      : i < step
+                        ? "w-1.5 bg-primary/40"
+                        : "w-1.5 bg-muted-foreground/20"
                   )}
                 />
               ))}

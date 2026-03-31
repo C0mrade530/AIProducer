@@ -1,63 +1,96 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { AGENTS } from "@/lib/agents/constants"
 import { StepCard } from "@/components/dashboard/step-card"
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/login")
+export default function DashboardPage() {
+  const router = useRouter()
+  const [profile, setProfile] = useState<{ name: string; niche: string } | null>(null)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [completedAgents, setCompletedAgents] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
 
-  // Get profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
+  useEffect(() => {
+    loadData()
+  }, [])
 
-  if (!profile?.onboarding_completed) redirect("/onboarding")
+  const loadData = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push("/login"); return }
 
-  // Get workspace
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("owner_id", user.id)
-    .single()
+    // Profile
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("name, niche, onboarding_completed")
+      .eq("id", user.id)
+      .single()
 
-  // Get project
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("workspace_id", workspace?.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single()
+    if (!profileData?.onboarding_completed) { router.push("/onboarding"); return }
+    setProfile(profileData)
 
-  // Get artifacts for this project
-  const { data: artifacts } = await supabase
-    .from("artifacts")
-    .select("agent_id, type, status, created_at, id")
-    .eq("project_id", project?.id)
+    // Workspace + project
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_id", user.id)
+      .single()
 
-  // Get agent definitions to map IDs to codes
-  const { data: agentDefs } = await supabase
-    .from("agent_definitions")
-    .select("id, code")
+    if (!workspace) { router.push("/onboarding"); return }
 
-  const agentIdToCode = new Map(agentDefs?.map((d) => [d.id, d.code]) || [])
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, current_step")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
 
-  // Map which agent codes have artifacts
-  const completedAgents = new Set(
-    artifacts?.map((a) => agentIdToCode.get(a.agent_id)).filter(Boolean) || []
-  )
+    if (project) {
+      setCurrentStep(project.current_step || 1)
 
-  const currentStep = project?.current_step || 1
+      // Get artifacts
+      const { data: artifacts } = await supabase
+        .from("artifacts")
+        .select("agent_id")
+        .eq("project_id", project.id)
+
+      const { data: agentDefs } = await supabase
+        .from("agent_definitions")
+        .select("id, code")
+
+      const idToCode = new Map(agentDefs?.map((d) => [d.id, d.code]) || [])
+      const completed = new Set(
+        artifacts?.map((a) => idToCode.get(a.agent_id)).filter(Boolean) as string[] || []
+      )
+      setCompletedAgents(completed)
+    }
+
+    setLoading(false)
+  }
+
   const completedCount = completedAgents.size
   const progress = Math.round((completedCount / 7) * 100)
 
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="h-8 w-48 bg-muted rounded animate-pulse mb-4" />
+        <div className="h-4 w-64 bg-muted rounded animate-pulse mb-10" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="font-heading text-3xl font-bold mb-2">
           Привет, {profile?.name}
@@ -67,7 +100,6 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Progress bar */}
       <div className="mb-10">
         <div className="flex items-center justify-between text-sm mb-2">
           <span className="text-muted-foreground">Прогресс</span>
@@ -81,7 +113,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Steps grid */}
       <div className="space-y-4">
         {AGENTS.map((agent) => {
           const isCompleted = completedAgents.has(agent.code)

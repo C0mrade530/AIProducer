@@ -63,10 +63,11 @@ export default function SettingsPage() {
       .single()
 
     // Add tracker settings with defaults if not in DB yet
-    if (profileData) {
-      profileData.tracker_motivation = profileData.tracker_motivation ?? false
-      profileData.tracker_daily_fact = profileData.tracker_daily_fact ?? false
-    }
+    const enrichedProfile = profileData ? {
+      ...profileData,
+      tracker_motivation: (profileData as any).tracker_motivation ?? false,
+      tracker_daily_fact: (profileData as any).tracker_daily_fact ?? false,
+    } : null
 
     const { data: telegramData } = await supabase
       .from("telegram_accounts")
@@ -89,7 +90,7 @@ export default function SettingsPage() {
       setSubscription(subData)
     }
 
-    setProfile(profileData)
+    setProfile(enrichedProfile)
     setTelegram(telegramData)
   }
 

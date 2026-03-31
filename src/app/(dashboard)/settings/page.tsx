@@ -28,6 +28,8 @@ export default function SettingsPage() {
     name: string
     niche: string
     bio: string
+    tracker_motivation: boolean
+    tracker_daily_fact: boolean
   } | null>(null)
   const [telegram, setTelegram] = useState<{
     username: string | null
@@ -56,7 +58,7 @@ export default function SettingsPage() {
 
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("name, niche, bio")
+      .select("name, niche, bio, tracker_motivation, tracker_daily_fact")
       .eq("id", user.id)
       .single()
 
@@ -291,6 +293,78 @@ export default function SettingsPage() {
                   </Button>
                 )}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tracker Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-lg">Трекер-ментор</CardTitle>
+            </div>
+            <CardDescription>
+              Настройки для личного AI-ментора и трекера прогресса
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium cursor-pointer" htmlFor="tracker-motivation">
+                  Мотивация в Telegram
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Трекер будет хвалить за прогресс и пушить за бездействие
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                id="tracker-motivation"
+                checked={profile?.tracker_motivation || false}
+                onChange={(e) =>
+                  setProfile((p) =>
+                    p ? { ...p, tracker_motivation: e.target.checked } : p
+                  )
+                }
+                className="h-5 w-5 rounded border-input cursor-pointer"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium cursor-pointer" htmlFor="tracker-daily-fact">
+                  Факт дня из книг
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Ежедневные цитаты и инсайты из книг по бизнесу, привязанные к твоей нише
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                id="tracker-daily-fact"
+                checked={profile?.tracker_daily_fact || false}
+                onChange={(e) =>
+                  setProfile((p) =>
+                    p ? { ...p, tracker_daily_fact: e.target.checked } : p
+                  )
+                }
+                className="h-5 w-5 rounded border-input cursor-pointer"
+              />
+            </div>
+            <div className="pt-2">
+              <Button
+                onClick={saveProfile}
+                loading={saving}
+                className="cursor-pointer"
+                size="sm"
+              >
+                Сохранить настройки
+              </Button>
+            </div>
+            {telegram?.linked_at ? null : (
+              <p className="text-xs text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
+                Для отправки мотивации и фактов нужно привязать Telegram выше
+              </p>
             )}
           </CardContent>
         </Card>

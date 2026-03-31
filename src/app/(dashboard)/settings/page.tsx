@@ -130,8 +130,9 @@ export default function SettingsPage() {
       })
     }
 
-    // Bot username — will be fetched dynamically in production
-    setTelegramLink(`https://t.me/aiproducer_bot?start=${token}`)
+    // Bot username from env or hardcoded
+    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "ProducerAI_mentor_bot"
+    setTelegramLink(`https://t.me/${botUsername}?start=${token}`)
     setLinkingTelegram(false)
   }
 

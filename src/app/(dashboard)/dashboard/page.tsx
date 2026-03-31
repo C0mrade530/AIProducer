@@ -1,17 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { AGENTS } from "@/lib/agents/constants"
 import { StepCard } from "@/components/dashboard/step-card"
+import { OnboardingTour } from "@/components/dashboard/onboarding-tour"
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [profile, setProfile] = useState<{ name: string; niche: string } | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [completedAgents, setCompletedAgents] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [showTour, setShowTour] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -70,6 +73,17 @@ export default function DashboardPage() {
     }
 
     setLoading(false)
+
+    // Show tour if ?tour=1 in URL
+    if (searchParams.get("tour") === "1") {
+      setShowTour(true)
+    }
+  }
+
+  const handleTourComplete = () => {
+    setShowTour(false)
+    // Remove ?tour=1 from URL
+    router.replace("/dashboard")
   }
 
   const completedCount = completedAgents.size
@@ -90,6 +104,8 @@ export default function DashboardPage() {
   }
 
   return (
+    <>
+    {showTour && <OnboardingTour onComplete={handleTourComplete} />}
     <div className="max-w-5xl mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="font-heading text-3xl font-bold mb-2">
@@ -131,5 +147,6 @@ export default function DashboardPage() {
         })}
       </div>
     </div>
+    </>
   )
 }

@@ -13,7 +13,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [checking, setChecking] = useState(true)
-  const submittedRef = useRef(false) // FIX #2: prevent double submit
+  const submittedRef = useRef(false)
 
   useEffect(() => {
     checkOnboarding()
@@ -31,89 +31,42 @@ export default function OnboardingPage() {
       .single()
 
     if (profile?.onboarding_completed) {
-      // Check if workspace exists too
-      const { data: workspace } = await supabase
-        .from("workspaces")
-        .select("id")
-        .eq("owner_id", user.id)
-        .limit(1)
-        .single()
-
-      if (workspace) {
-        router.push("/dashboard")
-        return
-      }
-      // Profile says done but no workspace — reset and let them redo
-      await supabase.from("profiles").update({ onboarding_completed: false }).eq("id", user.id)
+      router.push("/dashboard")
+      return
     }
     setChecking(false)
   }
 
   const handleComplete = async () => {
     if (!name.trim() || submittedRef.current) return
-    submittedRef.current = true // FIX #2: block double submit
+    submittedRef.current = true
     setLoading(true)
     setError("")
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError("Сессия истекла. Войдите заново."); setLoading(false); submittedRef.current = false; return }
+    try {
+      // Call server API — avoids RLS issues
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      })
 
-    // FIX #2: Check if workspace already exists
-    const { data: existingWs } = await supabase
-      .from("workspaces")
-      .select("id")
-      .eq("owner_id", user.id)
-      .limit(1)
-      .single()
+      const data = await res.json()
 
-    if (existingWs) {
-      // Already has workspace — just mark onboarding done and go
-      await supabase.from("profiles").update({ name: name.trim(), onboarding_completed: true }).eq("id", user.id)
+      if (!res.ok) {
+        setError(data.error || "Ошибка создания. Попробуйте ещё раз.")
+        submittedRef.current = false
+        setLoading(false)
+        return
+      }
+
       window.location.href = "/dashboard?tour=1"
-      return
-    }
-
-    // Step 1: Create workspace first (before marking onboarding complete)
-    const { data: workspace, error: wsError } = await supabase.from("workspaces").insert({
-      owner_id: user.id,
-      title: name.trim(),
-      niche: "",
-    }).select("id").single()
-
-    if (wsError || !workspace) {
-      console.error("Workspace error:", wsError)
-      setError("Ошибка создания. Попробуйте ещё раз.")
-      setLoading(false)
+    } catch (err) {
+      console.error("Onboarding error:", err)
+      setError("Ошибка сети. Попробуйте ещё раз.")
       submittedRef.current = false
-      return
+      setLoading(false)
     }
-
-    // Step 2: Create member, project, subscription
-    await Promise.all([
-      supabase.from("workspace_members").insert({
-        workspace_id: workspace.id,
-        user_id: user.id,
-        role: "owner",
-      }),
-      supabase.from("projects").insert({
-        workspace_id: workspace.id,
-        name: "Мой первый продукт",
-      }),
-      supabase.from("subscriptions").insert({
-        workspace_id: workspace.id,
-        plan: "starter",
-        status: "active",
-      }),
-    ])
-
-    // Step 3: Only NOW mark onboarding complete (after workspace exists)
-    await supabase.from("profiles").update({
-      name: name.trim(),
-      onboarding_completed: true,
-    }).eq("id", user.id)
-
-    window.location.href = "/dashboard?tour=1"
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

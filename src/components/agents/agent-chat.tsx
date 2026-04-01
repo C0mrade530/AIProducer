@@ -272,10 +272,11 @@ export function AgentChat({
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 space-y-4 md:space-y-6">
+        {/* Messages — centered compact layout */}
+        <div className="flex-1 overflow-y-auto py-3 md:py-4">
+          <div className="max-w-2xl mx-auto px-4 md:px-6 space-y-4">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto">
               <div
                 className={cn(
                   "h-16 w-16 rounded-2xl flex items-center justify-center mb-4",
@@ -321,53 +322,48 @@ export function AgentChat({
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={cn(
-                "group flex gap-3 animate-fade-in",
-                msg.role === "user" && "flex-row-reverse"
-              )}
+              className="group animate-fade-in"
             >
+              {/* Sender label */}
+              <div className="flex items-center gap-1.5 mb-1">
+                {msg.role === "user" ? (
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Sparkles className={cn("h-3.5 w-3.5", agentConfig.color)} />
+                )}
+                <span className="text-xs font-medium text-muted-foreground">
+                  {msg.role === "user" ? "Ты" : agentConfig.name}
+                </span>
+              </div>
+              {/* Message bubble */}
               <div
                 className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                  msg.role === "user" ? "bg-muted" : agentConfig.bgColor
+                  "rounded-xl px-4 py-3 text-sm leading-relaxed",
+                  msg.role === "user"
+                    ? "bg-primary/10 border border-primary/20"
+                    : "bg-muted"
                 )}
               >
-                {msg.role === "user" ? (
-                  <User className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Sparkles className={cn("h-4 w-4", agentConfig.color)} />
-                )}
-              </div>
-              <div className="flex flex-col gap-1 max-w-[85%] md:max-w-[75%]">
-                <div
-                  className={cn(
-                    "rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-tr-md"
-                      : "bg-muted rounded-tl-md"
-                  )}
-                >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
-                  {msg.role === "assistant" &&
-                    isStreaming &&
-                    i === messages.length - 1 && (
-                      <span className="inline-block w-2 h-4 bg-current opacity-50 animate-pulse ml-0.5" />
-                    )}
-                </div>
-
-                {/* Save as artifact button — only on assistant messages, not while streaming */}
+                <div className="whitespace-pre-wrap">{msg.content}</div>
                 {msg.role === "assistant" &&
-                  msg.content.length > 100 &&
-                  !(isStreaming && i === messages.length - 1) && (
-                    <button
-                      onClick={() => openSaveModal(i)}
-                      className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors cursor-pointer opacity-0 group-hover:opacity-100 ml-1"
-                    >
-                      <Save className="h-3 w-3" />
-                      Сохранить как артефакт
-                    </button>
+                  isStreaming &&
+                  i === messages.length - 1 && (
+                    <span className="inline-block w-2 h-4 bg-current opacity-50 animate-pulse ml-0.5" />
                   )}
               </div>
+
+              {/* Save as artifact button */}
+              {msg.role === "assistant" &&
+                msg.content.length > 100 &&
+                !(isStreaming && i === messages.length - 1) && (
+                  <button
+                    onClick={() => openSaveModal(i)}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors cursor-pointer opacity-0 group-hover:opacity-100 mt-1"
+                  >
+                    <Save className="h-3 w-3" />
+                    Сохранить как артефакт
+                  </button>
+                )}
             </div>
           ))}
 
@@ -395,11 +391,12 @@ export function AgentChat({
           )}
 
           <div ref={messagesEndRef} />
+          </div>{/* close max-w-2xl */}
         </div>
 
         {/* Input */}
         <div className="border-t px-4 md:px-6 py-3 md:py-4 pb-safe">
-          <div className="relative max-w-3xl mx-auto">
+          <div className="relative max-w-2xl mx-auto">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

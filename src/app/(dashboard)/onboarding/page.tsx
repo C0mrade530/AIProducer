@@ -44,26 +44,73 @@ export default function OnboardingPage() {
     setError("")
 
     try {
-      // Call server API — avoids RLS issues
-      const res = await fetch("/api/onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
-      })
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { throw new Error("Сессия истекла") }
 
-      const data = await res.json()
+      // Check existing workspace
+      const { data: existingWs } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("owner_id", user.id)
+        .maybeSingle()
 
-      if (!res.ok) {
-        setError(data.error || "Ошибка создания. Попробуйте ещё раз.")
-        submittedRef.current = false
-        setLoading(false)
+      if (existingWs) {
+        await supabase.from("profiles").update({ name: name.trim(), onboarding_completed: true }).eq("id", user.id)
+        window.location.href = "/dashboard?tour=1"
         return
       }
 
+      // Create workspace — INSERT then SELECT separately to avoid RLS issue
+      const { error: wsError } = await supabase
+        .from("workspaces")
+        .insert({ owner_id: user.id, title: name.trim(), niche: "" })
+
+      if (wsError) throw new Error(wsError.message)
+
+      // Now SELECT it back (RLS allows owner to SELECT)
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("owner_id", user.id)
+        .single()
+
+      if (!workspace) throw new Error("Workspace не найден после создания")
+
+      // Create related records
+      const [membersRes, projectsRes, subsRes] = await Promise.all([
+        supabase.from("workspace_members").insert({
+          workspace_id: workspace.id,
+          user_id: user.id,
+          role: "owner",
+        }),
+        supabase.from("projects").insert({
+          workspace_id: workspace.id,
+          name: "Мой первый продукт",
+        }),
+        supabase.from("subscriptions").insert({
+          workspace_id: workspace.id,
+          plan: "starter",
+          status: "active",
+        }),
+      ])
+
+      // Log errors but don't block
+      if (membersRes.error) console.error("members:", membersRes.error)
+      if (projectsRes.error) console.error("projects:", projectsRes.error)
+      if (subsRes.error) console.error("subs:", subsRes.error)
+
+      // Mark onboarding complete LAST
+      await supabase.from("profiles").update({
+        name: name.trim(),
+        onboarding_completed: true,
+      }).eq("id", user.id)
+
       window.location.href = "/dashboard?tour=1"
-    } catch (err) {
-      console.error("Onboarding error:", err)
-      setError("Ошибка сети. Попробуйте ещё раз.")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Неизвестная ошибка"
+      console.error("Onboarding error:", message)
+      setError(message)
       submittedRef.current = false
       setLoading(false)
     }

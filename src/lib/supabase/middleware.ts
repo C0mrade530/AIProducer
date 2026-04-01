@@ -6,7 +6,10 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(
+  // Just pass cookies through — don't call getUser() in middleware
+  // because edge runtime in Docker standalone can't reach Supabase API.
+  // Session refresh happens in API routes and page components instead.
+  createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -28,11 +31,6 @@ export async function updateSession(request: NextRequest) {
       },
     }
   )
-
-  // IMPORTANT: Call getUser() to refresh session cookies
-  // Without this, server-side API routes can't read the session
-  // We don't use the result for redirects — just to refresh tokens
-  await supabase.auth.getUser()
 
   return supabaseResponse
 }

@@ -24,10 +24,27 @@ export async function POST(
   }
 
   const body = await request.json()
-  const { message, projectId, runId, isArtifactRequest } = body
+  let { message, projectId, runId, isArtifactRequest } = body
 
   if (!message || !projectId) {
     return new Response("Missing message or projectId", { status: 400 })
+  }
+
+  // Auto-greeting: agent sends first message to introduce itself
+  const isAutoGreeting = message === "__auto_greeting__"
+  if (isAutoGreeting) {
+    const greetings: Record<string, string> = {
+      unpacker: "Привет! Начнём распаковку. Расскажи мне о себе: кто ты, чем занимаешься и как давно в этой сфере? Отвечай подробно — это поможет мне глубже понять твою экспертность.",
+      methodologist: "Привет! Я изучил результаты твоей распаковки. Давай создадим продукт на основе твоей экспертизы. Для начала расскажи: какой формат продукта тебе ближе — курс, менторинг, консалтинг? И какой результат должен получить твой клиент?",
+      promotion: "Привет! Я вижу твой продукт и позиционирование. Давай создадим контент-стратегию. Скажи, на каких площадках ты сейчас присутствуешь? Instagram, Telegram, YouTube, другие?",
+      warmup: "Привет! На основе твоего продукта и контент-стратегии построим прогрев аудитории. Расскажи: ты планируешь запуск к конкретной дате или хочешь вечнозелёную систему прогрева?",
+      leadmagnet: "Привет! Я изучил все предыдущие этапы. Давай создадим лид-магниты и воронку. Какой бесплатный материал ты мог бы дать аудитории, чтобы показать свою экспертизу? Может, чек-лист, гайд, мини-курс?",
+      sales: "Привет! На основе всех предыдущих этапов создам скрипты продаж. Скажи, как ты сейчас продаёшь — через переписку, созвоны, или и то и другое? И какой средний чек?",
+      tracker: "Привет! Я проанализировал весь твой путь от распаковки до продаж. Давай создам конкретный план действий на ближайшую неделю. Что из предыдущих этапов ты уже начал внедрять?",
+    }
+    message = greetings[agentCode] || "Привет! Давай начнём работу."
+    // For auto-greeting, the agent should respond as if the user asked to start
+    // We'll use a special system instruction
   }
 
   // FIX #8: Check subscription limits
@@ -160,12 +177,14 @@ export async function POST(
     currentRunId = newRun?.id
   }
 
-  // Save user message
-  await supabase.from("agent_messages").insert({
-    run_id: currentRunId,
-    role: "user",
-    content: message,
-  })
+  // Save user message (skip for auto-greeting — agent speaks first)
+  if (!isAutoGreeting) {
+    await supabase.from("agent_messages").insert({
+      run_id: currentRunId,
+      role: "user",
+      content: message,
+    })
+  }
 
   // ═══ ДВУХФАЗНАЯ СИСТЕМА: полный промпт vs краткое напоминание ═══
   //
@@ -206,13 +225,23 @@ export async function POST(
     .order("created_at", { ascending: true })
 
   // Build messages array: system + chat history
-  const messages = [
+  const allMessages = [
     ...systemMessages,
     ...((chatHistory?.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
     }))) || []),
   ]
+
+  // For auto-greeting, add instruction to introduce yourself
+  if (isAutoGreeting) {
+    allMessages.push({
+      role: "user" as const,
+      content: "Представься и задай первый вопрос чтобы начать работу. Будь дружелюбным, кратким. Задай 1-2 конкретных вопроса.",
+    })
+  }
+
+  const messages = allMessages
 
   // Select model: Sonnet for chat, Opus for artifact generation
   const model = selectModel(!!isArtifactRequest)

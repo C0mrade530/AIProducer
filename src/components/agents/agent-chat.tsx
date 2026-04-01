@@ -21,6 +21,17 @@ import {
 } from "lucide-react"
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
 
+// Fallback greetings if API fails
+const AGENT_GREETINGS: Record<string, string> = {
+  unpacker: "Привет! Я — Распаковщик. Расскажи мне о себе: кто ты и чем занимаешься?",
+  methodologist: "Привет! Я — Методолог. Давай создадим твой продукт. Какой формат тебе ближе: курс, менторинг или консалтинг?",
+  promotion: "Привет! Я — Маркетолог. Расскажи, на каких площадках ты сейчас?",
+  warmup: "Привет! Я — Прогревщик. Планируешь запуск к дате или хочешь вечнозелёную систему?",
+  leadmagnet: "Привет! Давай создадим лид-магнит. Какой материал ты мог бы дать бесплатно?",
+  sales: "Привет! Как ты сейчас продаёшь — переписка, созвоны? Какой средний чек?",
+  tracker: "Привет! Проанализирую твой путь и создам план на неделю. Что ты уже внедрил?",
+}
+
 interface Message {
   role: string
   content: string
@@ -79,6 +90,65 @@ export function AgentChat({
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  // Auto-send first message from agent when chat is empty
+  const autoSentRef = useRef(false)
+  useEffect(() => {
+    if (messages.length === 0 && !autoSentRef.current && projectId) {
+      autoSentRef.current = true
+      sendAutoGreeting()
+    }
+  }, [projectId, messages.length])
+
+  const sendAutoGreeting = async () => {
+    setIsStreaming(true)
+    setMessages([{ role: "assistant", content: "" }])
+
+    try {
+      const res = await fetch(`/api/agents/${agentCode}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "__auto_greeting__",
+          projectId,
+          runId,
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed")
+
+      const newRunId = res.headers.get("X-Run-Id")
+      if (newRunId) setRunId(newRunId)
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ""
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const text = decoder.decode(value)
+          for (const line of text.split("\n")) {
+            if (line.startsWith("data: ") && line !== "data: [DONE]") {
+              try {
+                const data = JSON.parse(line.slice(6))
+                const delta = data.choices?.[0]?.delta?.content
+                if (delta) {
+                  fullContent += delta
+                  setMessages([{ role: "assistant", content: fullContent }])
+                }
+              } catch { /* skip */ }
+            }
+          }
+        }
+      }
+    } catch {
+      setMessages([{ role: "assistant", content: AGENT_GREETINGS[agentCode] || "Привет! Давай начнём работу. Расскажи о себе." }])
+    } finally {
+      setIsStreaming(false)
+    }
+  }
 
   // Get next agent in pipeline
   const nextAgent = AGENTS.find((a) => a.step === agentConfig.step + 1)
@@ -276,46 +346,9 @@ export function AgentChat({
         <div className="flex-1 overflow-y-auto py-3 md:py-4">
           <div className="max-w-2xl mx-auto px-4 md:px-6 space-y-4">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto">
-              <div
-                className={cn(
-                  "h-16 w-16 rounded-2xl flex items-center justify-center mb-4",
-                  agentConfig.bgColor
-                )}
-              >
-                <Icon className={cn("h-8 w-8", agentConfig.color)} />
-              </div>
-              <h3 className="font-heading text-xl font-semibold mb-2">
-                {agentConfig.name}
-              </h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                {agentConfig.description}. Начните диалог — напишите сообщение
-                ниже.
-              </p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {agentCode === "unpacker" && (
-                  <>
-                    <QuickAction
-                      text="Привет, давай начнём"
-                      onClick={() => setInput("Привет! Давай начнём распаковку.")}
-                    />
-                    <QuickAction
-                      text="Расскажу о себе"
-                      onClick={() => setInput("Привет! Я готов рассказать о себе и своей экспертизе.")}
-                    />
-                  </>
-                )}
-                {agentCode !== "unpacker" && (
-                  <QuickAction
-                    text="Начать работу"
-                    onClick={() =>
-                      setInput(
-                        "Привет! Давай начнём. Используй результаты предыдущих этапов."
-                      )
-                    }
-                  />
-                )}
-              </div>
+            <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+              <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-sm text-muted-foreground">Агент готовится...</p>
             </div>
           )}
 
@@ -611,23 +644,5 @@ export function AgentChat({
         </div>
       )}
     </div>
-  )
-}
-
-/** Quick action chip for empty state */
-function QuickAction({
-  text,
-  onClick,
-}: {
-  text: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1.5 text-xs font-medium rounded-full border bg-card hover:bg-muted transition-colors cursor-pointer"
-    >
-      {text}
-    </button>
   )
 }

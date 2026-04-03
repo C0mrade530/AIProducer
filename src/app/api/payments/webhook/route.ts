@@ -99,6 +99,66 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Track referral conversion: when referred user pays, update referral status
+    try {
+      const { data: paidProfile } = await supabase
+        .from("profiles")
+        .select("id, referred_by")
+        .eq("id", metadata.user_id)
+        .single()
+
+      if (paidProfile?.referred_by) {
+        await supabase
+          .from("referrals")
+          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .eq("referrer_id", paidProfile.referred_by)
+          .eq("referred_id", paidProfile.id)
+
+        // Check if referrer has earned free month (5 paid referrals)
+        const { count: paidReferrals } = await supabase
+          .from("referrals")
+          .select("id", { count: "exact", head: true })
+          .eq("referrer_id", paidProfile.referred_by)
+          .in("status", ["paid", "rewarded"])
+
+        if (paidReferrals && paidReferrals >= 5) {
+          // Mark all as rewarded
+          await supabase
+            .from("referrals")
+            .update({ status: "rewarded", reward_applied: true })
+            .eq("referrer_id", paidProfile.referred_by)
+            .eq("status", "paid")
+
+          // Extend referrer's subscription by 30 days
+          const { data: referrerWs } = await supabase
+            .from("workspaces")
+            .select("id")
+            .eq("owner_id", paidProfile.referred_by)
+            .single()
+
+          if (referrerWs) {
+            const { data: referrerSub } = await supabase
+              .from("subscriptions")
+              .select("id, current_period_end")
+              .eq("workspace_id", referrerWs.id)
+              .single()
+
+            if (referrerSub) {
+              const newEnd = new Date(referrerSub.current_period_end)
+              newEnd.setDate(newEnd.getDate() + 30)
+              await supabase
+                .from("subscriptions")
+                .update({ current_period_end: newEnd.toISOString() })
+                .eq("id", referrerSub.id)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Referral tracking error:", err)
+      // Non-critical — don't fail the webhook
+    }
+
     // Log
     await supabase.from("usage_events").insert({
       workspace_id: workspaceId,

@@ -20,6 +20,8 @@ import {
   Check,
   Copy,
   ExternalLink,
+  Gift,
+  Users,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -44,6 +46,9 @@ export default function SettingsPage() {
   const [linkingTelegram, setLinkingTelegram] = useState(false)
   const [telegramLink, setTelegramLink] = useState("")
   const [copied, setCopied] = useState(false)
+  const [referralCode, setReferralCode] = useState("")
+  const [referralStats, setReferralStats] = useState({ total: 0, registered: 0, paid: 0 })
+  const [referralCopied, setReferralCopied] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -92,6 +97,18 @@ export default function SettingsPage() {
 
     setProfile(enrichedProfile)
     setTelegram(telegramData)
+
+    // Load referral data
+    try {
+      const refRes = await fetch("/api/referrals")
+      if (refRes.ok) {
+        const refData = await refRes.json()
+        setReferralCode(refData.referralCode || "")
+        setReferralStats(refData.stats)
+      }
+    } catch {
+      // Non-critical
+    }
   }
 
   const saveProfile = async () => {
@@ -379,6 +396,76 @@ export default function SettingsPage() {
             {telegram?.linked_at ? null : (
               <p className="text-xs text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
                 Для отправки мотивации и фактов нужно привязать Telegram выше
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Referral Program */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Gift className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-lg">Реферальная программа</CardTitle>
+            </div>
+            <CardDescription>
+              Приглашай друзей и получай бонусы. 5 оплативших друзей = бесплатный месяц
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {referralCode ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Твоя реферальная ссылка</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${referralCode}`}
+                      readOnly
+                      className="text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${referralCode}`)
+                        setReferralCopied(true)
+                        setTimeout(() => setReferralCopied(false), 2000)
+                      }}
+                      className="shrink-0 cursor-pointer"
+                    >
+                      {referralCopied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 pt-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      <span className="font-semibold">{referralStats.total}</span>{" "}
+                      <span className="text-muted-foreground">зарегистрировались</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      <span className="font-semibold">{referralStats.paid}</span>{" "}
+                      <span className="text-muted-foreground">оплатили</span>
+                    </span>
+                  </div>
+                </div>
+                {referralStats.paid >= 5 ? (
+                  <div className="bg-success/10 text-success border border-success/20 rounded-lg p-3 text-sm">
+                    Поздравляем! Вы получили бесплатный месяц подписки
+                  </div>
+                ) : (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    Ещё {5 - referralStats.paid} оплативших {(() => { const n = 5 - referralStats.paid; if (n === 1) return "друг"; if (n >= 2 && n <= 4) return "друга"; return "друзей" })()} до бесплатного месяца
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Реферальный код генерируется автоматически. Обновите страницу.
               </p>
             )}
           </CardContent>

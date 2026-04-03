@@ -1,16 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkles } from "lucide-react"
 import Link from "next/link"
+import { Suspense } from "react"
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get("ref") || ""
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -29,6 +32,11 @@ export default function RegisterPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          referral_code: refCode || undefined,
+        },
+      },
     })
 
     if (error) {
@@ -49,6 +57,7 @@ export default function RegisterPage() {
     }
 
     // Session exists — go to onboarding
+    // Referral code is stored in user_metadata and processed during onboarding
     window.location.href = "/onboarding"
   }
 
@@ -63,6 +72,12 @@ export default function RegisterPage() {
             <span className="font-heading text-2xl font-bold">AIProducer</span>
           </Link>
         </div>
+
+        {refCode && (
+          <div className="mb-4 text-center text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
+            Вы регистрируетесь по приглашению
+          </div>
+        )}
 
         <Card>
           <CardHeader className="text-center">
@@ -118,5 +133,13 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+      <RegisterForm />
+    </Suspense>
   )
 }

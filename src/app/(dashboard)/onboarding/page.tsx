@@ -99,6 +99,29 @@ export default function OnboardingPage() {
         onboarding_completed: true,
       }).eq("id", user.id)
 
+      // Process referral if user was referred
+      try {
+        const refCode = user.user_metadata?.referral_code
+        if (refCode) {
+          const { data: referrer } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("referral_code", refCode)
+            .single()
+
+          if (referrer && referrer.id !== user.id) {
+            await supabase.from("referrals").insert({
+              referrer_id: referrer.id,
+              referred_id: user.id,
+              status: "registered",
+            })
+            await supabase.from("profiles").update({ referred_by: referrer.id }).eq("id", user.id)
+          }
+        }
+      } catch {
+        // Non-critical — referral can fail silently
+      }
+
       window.location.href = "/pricing?onboarding=1"
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Неизвестная ошибка"

@@ -13,6 +13,7 @@ export default function DashboardLayout({
   const router = useRouter()
   const [profile, setProfile] = useState<{ name: string; niche: string } | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
+  const [plan, setPlan] = useState<string>("")
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -61,6 +62,15 @@ export default function DashboardLayout({
         .single()
 
       if (project) setCurrentStep(project.current_step || 1)
+
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan")
+        .eq("workspace_id", workspace.id)
+        .eq("status", "active")
+        .single()
+
+      if (sub) setPlan(sub.plan)
     }
 
     setReady(true)
@@ -79,6 +89,7 @@ export default function DashboardLayout({
       <Sidebar
         profile={profile}
         currentStep={currentStep}
+        plan={plan}
       />
       <main className="flex-1 overflow-auto md:pt-0 pt-14">
         {children}

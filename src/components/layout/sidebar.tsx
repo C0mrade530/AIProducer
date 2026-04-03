@@ -22,9 +22,11 @@ import { Button } from "@/components/ui/button"
 interface SidebarProps {
   profile: { name: string; niche: string } | null
   currentStep: number
+  plan?: string
 }
 
-export function Sidebar({ profile, currentStep }: SidebarProps) {
+export function Sidebar({ profile, currentStep, plan }: SidebarProps) {
+  const hasTrackerAccess = plan === "pro" || plan === "premium"
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
@@ -132,7 +134,9 @@ export function Sidebar({ profile, currentStep }: SidebarProps) {
         )}
         {AGENTS.map((agent) => {
           const isActive = pathname === `/agent/${agent.code}`
-          const isLocked = agent.step > currentStep + 1
+          // Tracker is always unlocked for Pro/Premium
+          const isTrackerFreeChat = agent.code === "tracker" && hasTrackerAccess
+          const isLocked = isTrackerFreeChat ? false : agent.step > currentStep + 1
           const isCompleted = agent.step < currentStep
           const isCurrent = agent.step === currentStep
 

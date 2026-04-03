@@ -74,7 +74,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/register">
               <Button size="sm" className="cursor-pointer">
-                Начать бесплатно
+                Регистрация
               </Button>
             </Link>
           </div>
@@ -96,26 +96,26 @@ export default function LandingPage() {
               7 AI-агентов для твоего продукта
             </div>
             <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6 animate-fade-up">
-              Создай и продай{" "}
+              Целая команда{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                онлайн-продукт
+                AI-экспертов
               </span>
               <br className="hidden sm:block" />
-              {" "}с помощью AI
+              {" "}в одном приложении
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-up leading-relaxed" style={{ animationDelay: "0.1s" }}>
-              От распаковки экспертности до первых продаж.
-              Пошаговый AI-помощник проведёт тебя через весь путь — от идеи до запуска.
+              7 AI-агентов проведут тебя от распаковки экспертности до первых продаж.
+              Продюсер, методолог, маркетолог, продажник — все в одном месте.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
               <Link href="/register">
                 <Button size="xl" className="w-full sm:w-auto cursor-pointer shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
-                  Начать бесплатно
+                  Начать сейчас
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               <p className="text-sm text-muted-foreground">
-                Первые 30 минут бесплатно • Без карты
+                от 2 990 ₽/мес • Результат за 7 шагов
               </p>
             </div>
           </div>
@@ -216,11 +216,11 @@ export default function LandingPage() {
                 Начни с первого агента прямо сейчас
               </h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Первый агент — Распаковщик — поможет тебе определить экспертность и позиционирование за 30 минут
+                Распаковщик поможет определить экспертность и позиционирование за 30 минут. Результат передаётся дальше по цепочке.
               </p>
               <Link href="/register">
                 <Button size="xl" className="cursor-pointer shadow-lg shadow-primary/20">
-                  Начать бесплатно
+                  Начать сейчас
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
@@ -293,8 +293,8 @@ export default function LandingPage() {
               Готов создать свой продукт?
             </h2>
             <p className="text-muted-foreground text-lg sm:text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
-              Зарегистрируйся и начни с первого агента — Распаковщика.
-              Это бесплатно и займёт всего 30 минут.
+              Зарегистрируйся, выбери тариф и начни с первого агента — Распаковщика.
+              Результат за 7 шагов.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href="/register">
@@ -303,10 +303,11 @@ export default function LandingPage() {
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span>Без кредитной карты</span>
-              </div>
+              <Link href="/pricing">
+                <Button size="xl" variant="outline" className="w-full sm:w-auto cursor-pointer">
+                  Смотреть тарифы
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

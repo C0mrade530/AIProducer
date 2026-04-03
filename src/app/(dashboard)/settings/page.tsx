@@ -157,9 +157,9 @@ export default function SettingsPage() {
   }
 
   const planLabels: Record<string, string> = {
-    starter: "Starter",
-    pro: "Pro",
-    premium: "Premium",
+    starter: "Starter — 2 990 ₽/мес",
+    pro: "Pro — 5 490 ₽/мес",
+    premium: "Premium — 8 990 ₽/мес",
   }
 
   return (

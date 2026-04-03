@@ -76,28 +76,23 @@ export async function POST(
       )
     }
 
-    // Check monthly usage limits
-    const limits: Record<string, number> = {
-      starter: 30,
-      pro: 100,
-      premium: 300,
+    // Check project limits (number of active projects/распаковок)
+    const projectLimits: Record<string, number> = {
+      starter: 1,
+      pro: 3,
+      premium: 5,
     }
-    const monthlyLimit = limits[subscription.plan] || 30
+    const maxProjects = projectLimits[subscription.plan] || 1
 
-    const monthStart = new Date()
-    monthStart.setDate(1)
-    monthStart.setHours(0, 0, 0, 0)
-
-    const { count } = await supabase
-      .from("agent_runs")
+    const { count: projectCount } = await supabase
+      .from("projects")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("started_at", monthStart.toISOString())
+      .eq("workspace_id", projectData.workspace_id)
 
-    if (count !== null && count >= monthlyLimit) {
+    if (projectCount !== null && projectCount > maxProjects) {
       return new Response(
         JSON.stringify({
-          error: `Лимит запусков исчерпан (${count}/${monthlyLimit}). Перейдите на более высокий тариф.`,
+          error: `Лимит проектов исчерпан (${projectCount}/${maxProjects}). Перейдите на более высокий тариф.`,
         }),
         { status: 429, headers: { "Content-Type": "application/json" } }
       )

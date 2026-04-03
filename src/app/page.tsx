@@ -315,16 +315,24 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t py-8 px-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
               <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
             <span className="font-heading text-sm font-semibold">AIProducer</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} AIProducer
-          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Оферта
+            </Link>
+            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Конфиденциальность
+            </Link>
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} AIProducer
+            </p>
+          </div>
         </div>
       </footer>
     </div>

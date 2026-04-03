@@ -101,6 +101,12 @@ export default function RegisterPage() {
               <Button type="submit" className="w-full" size="lg" loading={loading}>
                 Зарегистрироваться
               </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Регистрируясь, вы принимаете{" "}
+                <Link href="/terms" className="text-primary hover:underline cursor-pointer">оферту</Link>
+                {" "}и{" "}
+                <Link href="/privacy" className="text-primary hover:underline cursor-pointer">политику конфиденциальности</Link>
+              </p>
               <p className="text-center text-sm text-muted-foreground">
                 Уже есть аккаунт?{" "}
                 <Link href="/login" className="text-primary hover:underline cursor-pointer">

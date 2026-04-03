@@ -115,7 +115,13 @@ export function AgentChat({
         }),
       })
 
-      if (!res.ok) throw new Error("Failed")
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 429) {
+          const errData = await res.json().catch(() => null)
+          throw new Error(errData?.error || "Нет доступа")
+        }
+        throw new Error("Failed")
+      }
 
       const newRunId = res.headers.get("X-Run-Id")
       if (newRunId) setRunId(newRunId)
@@ -143,8 +149,12 @@ export function AgentChat({
           }
         }
       }
-    } catch {
-      setMessages([{ role: "assistant", content: AGENT_GREETINGS[agentCode] || "Привет! Давай начнём работу. Расскажи о себе." }])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ""
+      setMessages([{ role: "assistant", content: msg.includes("подписк") || msg.includes("тариф") || msg.includes("Лимит")
+        ? `⚠️ ${msg}`
+        : AGENT_GREETINGS[agentCode] || "Привет! Давай начнём работу. Расскажи о себе."
+      }])
     } finally {
       setIsStreaming(false)
     }
@@ -175,7 +185,13 @@ export function AgentChat({
         }),
       })
 
-      if (!res.ok) throw new Error("Failed to send")
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 429) {
+          const errData = await res.json().catch(() => null)
+          throw new Error(errData?.error || "Нет доступа")
+        }
+        throw new Error("Failed to send")
+      }
 
       const newRunId = res.headers.get("X-Run-Id")
       if (newRunId && !runId) setRunId(newRunId)

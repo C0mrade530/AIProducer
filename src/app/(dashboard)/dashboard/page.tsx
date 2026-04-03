@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client"
 import { AGENTS } from "@/lib/agents/constants"
 import { StepCard } from "@/components/dashboard/step-card"
 import { OnboardingTour } from "@/components/dashboard/onboarding-tour"
+import { Button } from "@/components/ui/button"
+import { CreditCard, ArrowRight } from "lucide-react"
+import Link from "next/link"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -15,6 +18,7 @@ export default function DashboardPage() {
   const [completedAgents, setCompletedAgents] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [showTour, setShowTour] = useState(false)
+  const [hasSubscription, setHasSubscription] = useState(true)
 
   useEffect(() => {
     loadData()
@@ -51,6 +55,18 @@ export default function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
+
+    // Check subscription
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("workspace_id", workspace.id)
+      .eq("status", "active")
+      .single()
+
+    if (!subscription) {
+      setHasSubscription(false)
+    }
 
     if (project) {
       setCurrentStep(project.current_step || 1)
@@ -128,6 +144,27 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      {!hasSubscription && (
+        <div className="mb-8 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/20 rounded-2xl p-8 text-center animate-fade-up">
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <CreditCard className="h-7 w-7 text-primary" />
+          </div>
+          <h2 className="font-heading text-2xl font-bold mb-2">
+            Выбери тариф, чтобы начать
+          </h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Для доступа к AI-агентам нужна активная подписка. Выбери подходящий тариф и начни создавать свой продукт.
+          </p>
+          <Link href="/pricing">
+            <Button size="lg" className="cursor-pointer shadow-lg shadow-primary/20">
+              Выбрать тариф
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
+          <p className="text-xs text-muted-foreground mt-3">от 2 990 ₽/мес</p>
+        </div>
+      )}
 
       <div className="space-y-4">
         {AGENTS.map((agent) => {

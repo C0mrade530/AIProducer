@@ -57,7 +57,7 @@ export default function OnboardingPage() {
 
       if (existingWs) {
         await supabase.from("profiles").update({ name: name.trim(), onboarding_completed: true }).eq("id", user.id)
-        window.location.href = "/dashboard?tour=1"
+        window.location.href = "/pricing?onboarding=1"
         return
       }
 
@@ -77,8 +77,8 @@ export default function OnboardingPage() {
 
       if (!workspace) throw new Error("Workspace не найден после создания")
 
-      // Create related records
-      const [membersRes, projectsRes, subsRes] = await Promise.all([
+      // Create related records (NO subscription — user must pay first)
+      const [membersRes, projectsRes] = await Promise.all([
         supabase.from("workspace_members").insert({
           workspace_id: workspace.id,
           user_id: user.id,
@@ -88,17 +88,10 @@ export default function OnboardingPage() {
           workspace_id: workspace.id,
           name: "Мой первый продукт",
         }),
-        supabase.from("subscriptions").insert({
-          workspace_id: workspace.id,
-          plan: "starter",
-          status: "active",
-        }),
       ])
 
-      // Log errors but don't block
       if (membersRes.error) console.error("members:", membersRes.error)
       if (projectsRes.error) console.error("projects:", projectsRes.error)
-      if (subsRes.error) console.error("subs:", subsRes.error)
 
       // Mark onboarding complete LAST
       await supabase.from("profiles").update({
@@ -106,7 +99,7 @@ export default function OnboardingPage() {
         onboarding_completed: true,
       }).eq("id", user.id)
 
-      window.location.href = "/dashboard?tour=1"
+      window.location.href = "/pricing?onboarding=1"
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Неизвестная ошибка"
       console.error("Onboarding error:", message)

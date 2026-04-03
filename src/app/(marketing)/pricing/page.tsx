@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, Sparkles, ArrowLeft } from "lucide-react"
@@ -57,7 +57,17 @@ const plans = [
 ]
 
 export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+      <PricingContent />
+    </Suspense>
+  )
+}
+
+function PricingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromOnboarding = searchParams.get("onboarding") === "1"
   const [loading, setLoading] = useState<string | null>(null)
 
   const handlePurchase = async (planKey: string) => {
@@ -111,11 +121,20 @@ export default function PricingPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
+          {fromOnboarding && (
+            <div className="inline-flex items-center gap-2 bg-success/10 text-success rounded-full px-4 py-1.5 text-sm font-medium mb-4 border border-success/20">
+              <Check className="h-3.5 w-3.5" />
+              Аккаунт создан! Осталось выбрать тариф
+            </div>
+          )}
           <h1 className="font-heading text-4xl font-bold mb-3">
             Выбери свой тариф
           </h1>
           <p className="text-lg text-muted-foreground">
-            Начни создавать онлайн-продукт с AI уже сегодня
+            {fromOnboarding
+              ? "Выбери тариф и начни работу с AI-агентами прямо сейчас"
+              : "Начни создавать онлайн-продукт с AI уже сегодня"
+            }
           </p>
         </div>
 

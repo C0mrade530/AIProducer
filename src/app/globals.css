@@ -36,6 +36,8 @@
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
 
   --animate-fade-in: fade-in 0.3s ease-out forwards;
   --animate-fade-up: fade-up 0.4s ease-out forwards;
@@ -68,6 +70,8 @@
   --sidebar: 250 40% 98%;
   --sidebar-foreground: 243 75% 20%;
   --sidebar-border: 240 20% 92%;
+  --sidebar-accent: 239 84% 67%;
+  --sidebar-accent-foreground: 0 0% 100%;
 }
 
 .dark {
@@ -95,6 +99,8 @@
   --sidebar: 240 20% 8%;
   --sidebar-foreground: 0 0% 95%;
   --sidebar-border: 240 15% 15%;
+  --sidebar-accent: 239 84% 67%;
+  --sidebar-accent-foreground: 0 0% 100%;
 }
 
 * {
@@ -142,6 +148,10 @@ body {
 *:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-reduced-motion: reduce) {

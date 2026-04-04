@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   creator: "GetProdi",
   verification: {
     yandex: "f7f8286786a36e2e",
+    google: "u3gEKfbBEv2B-omueJ4-GDDUWGu3_4vRjFtYfU8L5nE",
   },
   openGraph: {
     type: "website",

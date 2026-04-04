@@ -265,7 +265,14 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ CONTENT ═══ */}
-      <div className="bg-[#050510] relative z-10" style={{ marginTop: "-12vh" }}>
+      <div className="relative z-10" style={{ marginTop: "-12vh" }}>
+        {/* Gradient fade from hero to content */}
+        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-[#050510] -z-10" />
+
+        {/* Continuous dark background with subtle ambient glow */}
+        <div className="absolute inset-0 -z-20 bg-[#050510]" />
+        <div className="absolute top-[30%] left-1/4 w-[600px] h-[600px] bg-violet-600/[0.03] rounded-full blur-[150px] -z-10 pointer-events-none" />
+        <div className="absolute top-[60%] right-1/4 w-[500px] h-[500px] bg-blue-600/[0.03] rounded-full blur-[150px] -z-10 pointer-events-none" />
 
         {/* Pipeline mini-bar */}
         <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">

@@ -235,6 +235,8 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0 pointer-events-auto">
           <SplineHeroBackground />
         </div>
+        {/* Bottom fade overlay so hero blends into content */}
+        <div className="absolute bottom-0 left-0 right-0 h-[30vh] bg-gradient-to-b from-transparent via-[#050510]/60 to-[#050510] z-[5] pointer-events-none" />
         <div ref={heroContentRef} className="absolute inset-0 z-10 flex items-center pointer-events-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-2xl pt-16 sm:pt-0">
@@ -265,14 +267,17 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ CONTENT ═══ */}
-      <div className="relative z-10" style={{ marginTop: "-12vh" }}>
-        {/* Gradient fade from hero to content */}
-        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-[#050510] -z-10" />
-
-        {/* Continuous dark background with subtle ambient glow */}
+      <div className="relative z-10" style={{ marginTop: "-8vh" }}>
+        {/* Continuous dark background */}
         <div className="absolute inset-0 -z-20 bg-[#050510]" />
-        <div className="absolute top-[30%] left-1/4 w-[600px] h-[600px] bg-violet-600/[0.03] rounded-full blur-[150px] -z-10 pointer-events-none" />
-        <div className="absolute top-[60%] right-1/4 w-[500px] h-[500px] bg-blue-600/[0.03] rounded-full blur-[150px] -z-10 pointer-events-none" />
+
+        {/* Ambient glow orbs throughout the page */}
+        <div className="absolute top-[5%] right-[10%] w-[500px] h-[500px] bg-violet-600/[0.04] rounded-full blur-[150px] -z-10 pointer-events-none" />
+        <div className="absolute top-[20%] left-[5%] w-[400px] h-[400px] bg-blue-600/[0.03] rounded-full blur-[130px] -z-10 pointer-events-none" />
+        <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-violet-500/[0.03] rounded-full blur-[120px] -z-10 pointer-events-none" />
+        <div className="absolute top-[55%] left-[15%] w-[450px] h-[450px] bg-blue-500/[0.04] rounded-full blur-[140px] -z-10 pointer-events-none" />
+        <div className="absolute top-[70%] right-[5%] w-[300px] h-[300px] bg-violet-600/[0.03] rounded-full blur-[100px] -z-10 pointer-events-none" />
+        <div className="absolute top-[85%] left-[25%] w-[400px] h-[400px] bg-blue-600/[0.03] rounded-full blur-[130px] -z-10 pointer-events-none" />
 
         {/* Pipeline mini-bar */}
         <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">

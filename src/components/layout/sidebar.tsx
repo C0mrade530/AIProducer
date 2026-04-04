@@ -70,12 +70,11 @@ export function Sidebar({ profile, currentStep, plan }: SidebarProps) {
         className={cn(
           "flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300",
           // Desktop
-          "hidden md:flex",
-          collapsed ? "w-16" : "w-64",
+          "hidden md:flex md:relative",
+          collapsed ? "md:w-16" : "md:w-64",
           // Mobile drawer
-          "md:relative fixed top-0 left-0 bottom-0 z-50",
-          mobileOpen ? "flex" : "hidden md:flex",
-          "w-64" // Mobile always full width
+          "fixed top-0 left-0 bottom-0 z-50 w-64",
+          mobileOpen ? "flex" : "hidden md:flex"
         )}
       >
       {/* Logo */}

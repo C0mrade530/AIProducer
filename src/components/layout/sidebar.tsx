@@ -79,7 +79,8 @@ export function Sidebar({ profile, currentStep, plan }: SidebarProps) {
         )}
       >
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border relative">
+        <div className="absolute bottom-0 left-4 right-4 accent-line" />
         <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer" onClick={closeMobile}>
           <ProdiLogo size={32} />
           {!collapsed && (
@@ -233,10 +234,10 @@ function NavItem({
       onClick={onMobileClick}
       title={collapsed ? (tooltip || label) : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 cursor-pointer",
+        "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 cursor-pointer",
         active
-          ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"
-          : "text-sidebar-foreground/70 hover:bg-sidebar-border/50 hover:text-sidebar-foreground",
+          ? "bg-sidebar-accent/10 text-sidebar-accent font-medium shadow-[0_0_12px_hsl(262_85%_62%/0.15)]"
+          : "text-sidebar-foreground/60 hover:bg-sidebar-border/40 hover:text-sidebar-foreground",
         disabled && "opacity-40 pointer-events-none",
         collapsed && "justify-center px-0"
       )}

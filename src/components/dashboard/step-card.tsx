@@ -19,19 +19,20 @@ export function StepCard({ agent, isCompleted, isCurrent, isLocked }: StepCardPr
   return (
     <div
       className={cn(
-        "group flex items-center gap-5 rounded-xl border p-5 transition-all duration-200",
-        isCompleted && "bg-success/5 border-success/20",
-        isCurrent && "bg-primary/5 border-primary/20 shadow-sm",
-        isLocked && "opacity-50",
-        !isCompleted && !isCurrent && !isLocked && "hover:border-muted-foreground/20 hover:shadow-sm"
+        "group flex items-center gap-5 rounded-xl p-5 transition-all duration-200 glass border",
+        isCompleted && "border-emerald-500/20",
+        isCurrent && "border-primary/30 glow-border shadow-[0_0_20px_hsl(262_85%_62%/0.1)]",
+        isLocked && "opacity-40",
+        !isCompleted && !isCurrent && !isLocked && "border-gray-800/40 hover:border-gray-700/60"
       )}
     >
       {/* Step number + icon */}
       <div className="relative">
         <div
           className={cn(
-            "h-14 w-14 rounded-xl flex items-center justify-center transition-colors",
-            isCompleted ? "bg-success/10" : agent.bgColor
+            "h-14 w-14 rounded-xl flex items-center justify-center transition-all",
+            isCompleted ? "bg-success/10" : agent.bgColor,
+            isCurrent && "shadow-[0_0_16px_hsl(262_85%_62%/0.2)]"
           )}
         >
           {isCompleted ? (
@@ -42,7 +43,12 @@ export function StepCard({ agent, isCompleted, isCurrent, isLocked }: StepCardPr
             <Icon className={cn("h-6 w-6", agent.color)} />
           )}
         </div>
-        <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-card border text-[10px] font-bold flex items-center justify-center">
+        <span
+          className={cn(
+            "absolute -top-1 -left-1 h-5 w-5 rounded-full bg-[#0a0a1a] text-[10px] font-bold flex items-center justify-center border",
+            isCurrent ? "border-primary text-primary" : "border-gray-700 text-gray-400"
+          )}
+        >
           {agent.step}
         </span>
       </div>
@@ -68,14 +74,14 @@ export function StepCard({ agent, isCompleted, isCurrent, isLocked }: StepCardPr
           </Link>
         ) : isCurrent ? (
           <Link href={`/agent/${agent.code}`}>
-            <Button size="sm" className="cursor-pointer">
+            <Button size="sm" className="cursor-pointer rounded-xl">
               Начать
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         ) : !isLocked ? (
           <Link href={`/agent/${agent.code}`}>
-            <Button variant="outline" size="sm" className="cursor-pointer">
+            <Button variant="outline" size="sm" className="cursor-pointer rounded-xl">
               Перейти
             </Button>
           </Link>

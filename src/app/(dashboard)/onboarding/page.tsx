@@ -139,24 +139,27 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#050510" }}>
+        <div className="h-8 w-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-lg animate-fade-up text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#050510" }}>
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]" />
+
+      <div className="w-full max-w-lg animate-fade-up text-center relative z-10">
         <div className="inline-flex items-center gap-2.5 mb-8">
           <ProdiLogo size={48} />
-          <span className="font-heading text-2xl font-bold">GetProdi</span>
+          <span className="font-heading text-2xl font-bold text-white">GetProdi</span>
         </div>
 
-        <h1 className="font-heading text-4xl font-bold mb-3">
+        <h1 className="font-heading text-4xl font-bold mb-3 text-white">
           Как тебя зовут?
         </h1>
-        <p className="text-muted-foreground text-lg mb-8">
+        <p className="text-gray-400 text-lg mb-8">
           Так к тебе будут обращаться AI-агенты
         </p>
 
@@ -167,15 +170,15 @@ export default function OnboardingPage() {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
             autoFocus
-            className="text-center text-lg h-14 mb-4"
+            className="text-center text-lg h-14 mb-4 bg-gray-900/50 border-gray-700/50 text-white placeholder:text-gray-500"
           />
-          {error && <p className="text-sm text-destructive mb-4">{error}</p>}
+          {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
           <Button
             onClick={handleComplete}
             disabled={!name.trim() || loading}
             loading={loading}
             size="xl"
-            className="w-full cursor-pointer"
+            className="w-full cursor-pointer rounded-xl"
           >
             Начать
             <ArrowRight className="h-5 w-5" />

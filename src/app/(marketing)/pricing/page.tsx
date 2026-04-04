@@ -101,9 +101,9 @@ function PricingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen text-white" style={{ background: "#050510" }}>
       {/* Nav */}
-      <nav className="border-b">
+      <nav className="border-b border-gray-800/60" style={{ background: "rgba(5, 5, 16, 0.8)", backdropFilter: "blur(12px)" }}>
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 cursor-pointer">
             <ProdiLogo size={36} />
@@ -142,10 +142,10 @@ function PricingContent() {
             <div
               key={plan.key}
               className={cn(
-                "relative rounded-2xl border p-6 flex flex-col transition-all duration-200",
+                "relative glass rounded-2xl border p-6 flex flex-col transition-all duration-200",
                 plan.popular
-                  ? "border-primary shadow-lg shadow-primary/10 scale-[1.02]"
-                  : "hover:border-muted-foreground/30"
+                  ? "border-violet-500/40 glow-border shadow-lg shadow-violet-500/10 scale-[1.02]"
+                  : "border-gray-800/60 hover:border-gray-700/60"
               )}
             >
               {plan.popular && (

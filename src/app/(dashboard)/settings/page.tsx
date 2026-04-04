@@ -190,7 +190,7 @@ export default function SettingsPage() {
 
       <div className="space-y-6">
         {/* Profile */}
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -243,7 +243,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Telegram */}
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-muted-foreground" />
@@ -332,7 +332,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Tracker Settings */}
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4 text-muted-foreground" />
@@ -425,7 +425,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Referral Program */}
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Gift className="h-4 w-4 text-muted-foreground" />
@@ -495,7 +495,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Subscription */}
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" />

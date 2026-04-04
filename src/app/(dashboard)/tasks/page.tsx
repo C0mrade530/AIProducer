@@ -135,7 +135,7 @@ export default function TasksPage() {
 
       {/* Add task form */}
       {showAdd && (
-        <div className="flex gap-2 mb-6 animate-fade-in">
+        <div className="flex gap-2 mb-6 animate-fade-in glass rounded-xl p-3 border border-gray-800/40">
           <Input
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
@@ -152,11 +152,11 @@ export default function TasksPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
+            <div key={i} className="h-16 rounded-xl glass border border-gray-800/40 animate-pulse" />
           ))}
         </div>
       ) : tasks.length === 0 ? (
-        <Card>
+        <Card className="glass border-gray-800/40">
           <CardContent className="py-12 text-center">
             <ListTodo className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground mb-4">
@@ -200,12 +200,15 @@ function TaskSection({
 }) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-muted-foreground mb-3">{title}</h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+        {title}
+      </h3>
       <div className="space-y-2">
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center gap-3 rounded-xl border p-4 hover:bg-muted/30 transition-colors"
+            className={`flex items-center gap-3 rounded-xl p-4 transition-all glass border ${task.status === "in_progress" ? "border-primary/20 glow-border" : "border-gray-800/40 hover:border-gray-700/60"}`}
           >
             <button
               onClick={() =>

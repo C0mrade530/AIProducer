@@ -108,11 +108,11 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="h-8 w-48 bg-muted rounded animate-pulse mb-4" />
-        <div className="h-4 w-64 bg-muted rounded animate-pulse mb-10" />
+        <div className="h-8 w-48 glass border border-gray-800/40 rounded-xl animate-pulse mb-4" />
+        <div className="h-4 w-64 glass border border-gray-800/40 rounded-xl animate-pulse mb-10" />
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            <div key={i} className="h-20 glass border border-gray-800/40 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -137,16 +137,20 @@ export default function DashboardPage() {
           <span className="text-muted-foreground">Прогресс</span>
           <span className="font-medium">{progress}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progress}%`,
+              background: "linear-gradient(90deg, hsl(262 85% 62%), hsl(220 80% 58%))",
+              boxShadow: "0 0 12px hsl(262 85% 62% / 0.4), 0 0 24px hsl(262 85% 62% / 0.2)",
+            }}
           />
         </div>
       </div>
 
       {!hasSubscription && (
-        <div className="mb-8 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/20 rounded-2xl p-8 text-center animate-fade-up">
+        <div className="mb-8 glass border border-primary/20 glow-border rounded-2xl p-8 text-center animate-fade-up">
           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <CreditCard className="h-7 w-7 text-primary" />
           </div>

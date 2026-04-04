@@ -377,7 +377,7 @@ export function AgentChat({
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Agent header */}
-        <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b">
+        <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-gray-800/60 glass">
           <div
             className={cn(
               "h-10 w-10 rounded-xl flex items-center justify-center",
@@ -441,8 +441,8 @@ export function AgentChat({
                 className={cn(
                   "rounded-xl px-4 py-3 text-sm leading-relaxed",
                   msg.role === "user"
-                    ? "bg-primary/10 border border-primary/20"
-                    : "bg-muted"
+                    ? "bg-white/5 border border-white/10"
+                    : "glass border border-gray-800/60 relative"
                 )}
               >
                 <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -496,14 +496,14 @@ export function AgentChat({
         </div>
 
         {/* Input */}
-        <div className="border-t px-4 md:px-6 py-3 md:py-4 pb-safe">
+        <div className="border-t border-gray-800/60 glass-strong px-4 md:px-6 py-3 md:py-4 pb-safe">
           <div className="relative max-w-2xl mx-auto">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Напишите сообщение..."
-              className="pr-14 min-h-[52px] max-h-[200px] resize-none rounded-xl text-base"
+              className="pr-14 min-h-[52px] max-h-[200px] resize-none rounded-xl text-base bg-white/5 border-gray-800/60 focus:border-violet-500/40"
               rows={1}
               disabled={isStreaming}
             />
@@ -511,7 +511,7 @@ export function AgentChat({
               size="icon"
               onClick={handleSend}
               disabled={!input.trim() || isStreaming}
-              className="absolute right-2 bottom-2 h-9 w-9 rounded-lg cursor-pointer"
+              className="absolute right-2 bottom-2 h-9 w-9 rounded-lg cursor-pointer shadow-[0_0_12px_hsl(262_85%_62%/0.3)]"
             >
               <Send className="h-4 w-4" />
             </Button>
@@ -534,7 +534,7 @@ export function AgentChat({
           />
 
           <div className={cn(
-            "border-l bg-card overflow-y-auto flex flex-col",
+            "border-l border-gray-800/60 glass-strong overflow-y-auto flex flex-col",
             // Desktop: sidebar
             "md:w-96 md:relative md:z-0",
             // Mobile: modal overlay from right

@@ -204,9 +204,11 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#000000] text-white overflow-x-hidden">
       {/* Star particles — full viewport, all screen sizes */}
-      <div className="starfield" />
+      <div className="starfield">
+        <div className="star-layer" />
+      </div>
 
       {/* ═══ NAV ═══ */}
       <nav
@@ -238,8 +240,8 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0 pointer-events-auto">
           <SplineHeroBackground />
         </div>
-        {/* Bottom fade overlay so hero blends into content */}
-        <div className="absolute bottom-0 left-0 right-0 h-[30vh] bg-gradient-to-b from-transparent via-[#050510]/60 to-[#050510] z-[5] pointer-events-none" />
+        {/* Bottom fade — seamless blend into content */}
+        <div className="absolute bottom-0 left-0 right-0 h-[40vh] z-[5] pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.5) 40%, rgba(0,0,0,1))" }} />
         <div ref={heroContentRef} className="absolute inset-0 z-10 flex items-center pointer-events-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-2xl pt-16 sm:pt-0">
@@ -272,7 +274,7 @@ export default function LandingPage() {
       {/* ═══ CONTENT ═══ */}
       <div className="relative z-10" style={{ marginTop: "-8vh" }}>
         {/* Continuous dark background */}
-        <div className="absolute inset-0 -z-20 bg-[#050510]" />
+        <div className="absolute inset-0 -z-20 bg-[#000000]" />
 
         {/* Ambient glow orbs throughout the page */}
         <div className="absolute top-[5%] right-[10%] w-[500px] h-[500px] bg-violet-600/[0.04] rounded-full blur-[150px] -z-10 pointer-events-none" />

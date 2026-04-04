@@ -101,7 +101,7 @@ function PricingContent() {
   }
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#050510" }}>
+    <div className="min-h-screen text-white" style={{ background: "#000000" }}>
       {/* Nav */}
       <nav className="border-b border-gray-800/60" style={{ background: "rgba(5, 5, 16, 0.8)", backdropFilter: "blur(12px)" }}>
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">

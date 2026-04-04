@@ -58,7 +58,7 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#050510" }}>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#000000" }}>
       <div className="absolute top-0 left-1/3 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[120px]" />
       <div className="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-blue-600/15 rounded-full blur-[120px]" />
 
@@ -132,7 +132,7 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: "#050510" }}><div className="h-8 w-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}><div className="h-8 w-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>}>
       <RegisterForm />
     </Suspense>
   )

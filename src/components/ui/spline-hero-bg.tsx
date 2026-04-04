@@ -21,8 +21,8 @@ export function SplineHeroBackground() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `
-            linear-gradient(to right, rgba(0,0,0,0.85), transparent 35%, transparent 65%, rgba(0,0,0,0.85)),
-            linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.95))
+            linear-gradient(to right, rgba(0,0,0,0.85), transparent 30%, transparent 70%, rgba(0,0,0,0.85)),
+            linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.95) 85%, rgba(0,0,0,1))
           `,
         }}
       />

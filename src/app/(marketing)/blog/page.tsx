@@ -65,7 +65,7 @@ export default function BlogPage() {
   const rest = articles.filter((a) => !a.featured)
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#050510" }}>
+    <div className="min-h-screen text-white" style={{ background: "#000000" }}>
       {/* Nav */}
       <nav
         className="border-b border-gray-800/60"

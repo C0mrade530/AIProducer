@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#050510" }}>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#000000" }}>
       <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[120px]" />
       <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-blue-600/15 rounded-full blur-[120px]" />
 

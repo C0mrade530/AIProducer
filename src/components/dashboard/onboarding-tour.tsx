@@ -18,7 +18,7 @@ import {
 
 const TOUR_STEPS = [
   {
-    title: "Добро пожаловать в AIProducer!",
+    title: "Добро пожаловать в GetProdi!",
     description: "Это твой личный AI-продюсер. 7 умных агентов помогут создать и продать онлайн-продукт. Давай я покажу, как всё устроено.",
     icon: Sparkles,
     color: "text-primary",

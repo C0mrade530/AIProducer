@@ -37,7 +37,7 @@ function exportArtifactPdf(title: string, contentMd: string) {
 
   // Title is escaped to prevent injection
   const safeTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-  doc.title = `${title} — AIProducer`
+  doc.title = `${title} — GetProdi`
 
   const style = doc.createElement("style")
   style.textContent = `
@@ -56,7 +56,7 @@ function exportArtifactPdf(title: string, contentMd: string) {
 
   const meta = doc.createElement("p")
   meta.className = "meta"
-  meta.textContent = `AIProducer • ${new Date().toLocaleDateString("ru-RU")}`
+  meta.textContent = `GetProdi • ${new Date().toLocaleDateString("ru-RU")}`
   doc.body.appendChild(meta)
 
   // Render content as plain text with pre-wrap (preserves markdown formatting)
@@ -67,7 +67,7 @@ function exportArtifactPdf(title: string, contentMd: string) {
 
   const footer = doc.createElement("div")
   footer.className = "footer"
-  footer.textContent = "Сгенерировано в AIProducer"
+  footer.textContent = "Сгенерировано в GetProdi"
   doc.body.appendChild(footer)
 
   setTimeout(() => printWindow.print(), 300)
@@ -348,7 +348,7 @@ export function AgentChat({
         setShowNextAgent(true)
 
         // FIX #5: Notify sidebar to refresh step data
-        window.dispatchEvent(new Event("aiproducer:step-updated"))
+        window.dispatchEvent(new Event("getprodi:step-updated"))
 
         setTimeout(() => {
           setShowSaveModal(false)

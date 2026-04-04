@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  aiproducer:
+  getprodi:
     build: .
-    container_name: aiproducer
+    container_name: getprodi
     restart: unless-stopped
     ports:
       - "80:3000"

@@ -1,5 +1,5 @@
 {
-  "name": "aiproducer",
+  "name": "getprodi",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.74",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.0",
     "class-variance-authority": "^0.7.1",

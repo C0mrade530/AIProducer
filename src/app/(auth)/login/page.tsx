@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sparkles } from "lucide-react"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
 import Link from "next/link"
 
 export default function LoginPage() {
@@ -43,11 +43,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-fade-up">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-heading text-2xl font-bold">AIProducer</span>
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
+            <ProdiLogo size={40} />
+            <span className="font-heading text-2xl font-bold">GetProdi</span>
           </Link>
         </div>
 

@@ -109,7 +109,7 @@ export async function sendStageComplete(
   let text = `🎉 <b>Этап завершён!</b>\n\nТы прошёл этап: <b>${stageName}</b>`
 
   if (nextStageName) {
-    text += `\n\nСледующий этап: <b>${nextStageName}</b>\nОткрой AIProducer и продолжай!`
+    text += `\n\nСледующий этап: <b>${nextStageName}</b>\nОткрой GetProdi и продолжай!`
   } else {
     text += `\n\n🏆 Все этапы пройдены! Поздравляю!`
   }

@@ -4,7 +4,8 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, Sparkles, ArrowLeft } from "lucide-react"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
+import { Check, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -104,11 +105,9 @@ function PricingContent() {
       {/* Nav */}
       <nav className="border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-heading text-xl font-bold">AIProducer</span>
+          <Link href="/" className="flex items-center gap-2.5 cursor-pointer">
+            <ProdiLogo size={36} />
+            <span className="font-heading text-xl font-bold">GetProdi</span>
           </Link>
           <Link href="/">
             <Button variant="ghost" size="sm" className="cursor-pointer">

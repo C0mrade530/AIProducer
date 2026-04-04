@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { AGENTS } from "@/lib/agents/constants"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
 import {
-  Sparkles,
   LayoutDashboard,
   ListTodo,
   Settings,
@@ -52,10 +52,8 @@ export function Sidebar({ profile, currentStep, plan }: SidebarProps) {
           <Menu className="h-5 w-5" />
         </button>
         <Link href="/dashboard" className="flex items-center gap-2 ml-3 cursor-pointer">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-heading text-lg font-bold">AIProducer</span>
+          <ProdiLogo size={32} />
+          <span className="font-heading text-lg font-bold">GetProdi</span>
         </Link>
       </div>
 
@@ -83,11 +81,9 @@ export function Sidebar({ profile, currentStep, plan }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer" onClick={closeMobile}>
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <ProdiLogo size={32} />
           {!collapsed && (
-            <span className="font-heading text-lg font-bold">AIProducer</span>
+            <span className="font-heading text-lg font-bold">GetProdi</span>
           )}
         </Link>
         {/* Close button for mobile, collapse for desktop */}

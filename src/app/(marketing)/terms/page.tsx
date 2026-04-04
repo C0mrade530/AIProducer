@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
-import { Sparkles, ArrowLeft } from "lucide-react"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default function TermsPage() {
@@ -8,11 +9,9 @@ export default function TermsPage() {
       {/* Nav */}
       <nav className="border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-heading text-xl font-bold">AIProducer</span>
+          <Link href="/" className="flex items-center gap-2.5 cursor-pointer">
+            <ProdiLogo size={36} />
+            <span className="font-heading text-xl font-bold">GetProdi</span>
           </Link>
           <Link href="/">
             <Button variant="ghost" size="sm" className="cursor-pointer">
@@ -31,7 +30,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-heading text-xl font-semibold mb-3">1. Общие положения</h2>
-            <p>1.1. Настоящий документ является публичной офертой (далее — «Оферта») индивидуального предпринимателя (далее — «Исполнитель»), адресованной любому физическому или юридическому лицу (далее — «Заказчик»), и содержит все существенные условия предоставления доступа к сервису AIProducer (далее — «Сервис»).</p>
+            <p>1.1. Настоящий документ является публичной офертой (далее — «Оферта») индивидуального предпринимателя (далее — «Исполнитель»), адресованной любому физическому или юридическому лицу (далее — «Заказчик»), и содержит все существенные условия предоставления доступа к сервису GetProdi (далее — «Сервис»).</p>
             <p>1.2. В соответствии со статьёй 437 Гражданского кодекса Российской Федерации, настоящий документ является публичной офертой. Акцептом оферты является регистрация в Сервисе и/или оплата подписки.</p>
             <p>1.3. Исполнитель оставляет за собой право вносить изменения в настоящую Оферту без предварительного уведомления Заказчика. Новая редакция Оферты вступает в силу с момента её размещения на сайте Сервиса, если иное не предусмотрено новой редакцией. Продолжение использования Сервиса после внесения изменений означает согласие Заказчика с новой редакцией Оферты.</p>
             <p>1.4. Заказчик обязан самостоятельно отслеживать изменения Оферты.</p>
@@ -39,7 +38,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-heading text-xl font-semibold mb-3">2. Предмет оферты</h2>
-            <p>2.1. Исполнитель предоставляет Заказчику доступ к платформе AIProducer — SaaS-сервису с 7 AI-агентами для создания экспертных онлайн-продуктов (далее — «Сервис»).</p>
+            <p>2.1. Исполнитель предоставляет Заказчику доступ к платформе GetProdi — SaaS-сервису с 7 AI-агентами для создания экспертных онлайн-продуктов (далее — «Сервис»).</p>
             <p>2.2. Сервис предоставляется «как есть» (as is). Исполнитель не гарантирует, что Сервис будет соответствовать конкретным целям и ожиданиям Заказчика, будет работать непрерывно, быстро, надёжно и без ошибок.</p>
             <p>2.3. Исполнитель не несёт ответственности за любые прямые или косвенные убытки, возникшие в результате использования или невозможности использования Сервиса.</p>
           </section>

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Create YooKassa payment
     const payment = await createPayment({
       amount: selectedPlan.price,
-      description: `AIProducer — подписка ${selectedPlan.name}`,
+      description: `GetProdi — подписка ${selectedPlan.name}`,
       returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?payment=success&tour=1`,
       metadata: {
         workspace_id: workspace.id,

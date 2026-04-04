@@ -21,8 +21,8 @@ export default function DashboardLayout({
 
     // FIX #5: Listen for custom event to refresh sidebar after artifact save
     const handleStepUpdate = () => loadData()
-    window.addEventListener("aiproducer:step-updated", handleStepUpdate)
-    return () => window.removeEventListener("aiproducer:step-updated", handleStepUpdate)
+    window.addEventListener("getprodi:step-updated", handleStepUpdate)
+    return () => window.removeEventListener("getprodi:step-updated", handleStepUpdate)
   }, [])
 
   const loadData = async () => {

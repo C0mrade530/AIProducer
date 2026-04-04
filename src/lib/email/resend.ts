@@ -12,7 +12,7 @@ export async function sendEmail({
   html: string
 }) {
   const { data, error } = await resend.emails.send({
-    from: "AIProducer <noreply@aiproducer.ru>",
+    from: "GetProdi <noreply@getprodi.ru>",
     to,
     subject,
     html,
@@ -29,18 +29,18 @@ export async function sendEmail({
 export async function sendWelcomeEmail(to: string, name: string) {
   return sendEmail({
     to,
-    subject: "Добро пожаловать в AIProducer!",
+    subject: "Добро пожаловать в GetProdi!",
     html: `
       <div style="font-family: 'DM Sans', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 32px;">
-          <div style="display: inline-block; background: #6366F1; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: inline-block; background: #7C3AED; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
             <span style="color: white; font-size: 24px;">✦</span>
           </div>
-          <h1 style="font-size: 24px; font-weight: 700; color: #1E1B4B; margin: 0;">AIProducer</h1>
+          <h1 style="font-size: 24px; font-weight: 700; color: #1E1B4B; margin: 0;">GetProdi</h1>
         </div>
         <h2 style="font-size: 20px; color: #1E1B4B;">Привет, ${name}!</h2>
         <p style="color: #64748B; line-height: 1.6;">
-          Рады видеть тебя в AIProducer. Теперь у тебя есть доступ к 7 AI-агентам,
+          Рады видеть тебя в GetProdi. Теперь у тебя есть доступ к 7 AI-агентам,
           которые помогут создать и продать твой онлайн-продукт.
         </p>
         <p style="color: #64748B; line-height: 1.6;">
@@ -49,12 +49,12 @@ export async function sendWelcomeEmail(to: string, name: string) {
         </p>
         <div style="text-align: center; margin: 32px 0;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard"
-             style="display: inline-block; background: #6366F1; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+             style="display: inline-block; background: #7C3AED; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
             Перейти в Dashboard
           </a>
         </div>
         <p style="color: #94A3B8; font-size: 13px; text-align: center;">
-          &copy; AIProducer ${new Date().getFullYear()}
+          &copy; GetProdi ${new Date().getFullYear()}
         </p>
       </div>
     `,
@@ -79,10 +79,10 @@ export async function sendPaymentConfirmationEmail(
     html: `
       <div style="font-family: 'DM Sans', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 32px;">
-          <div style="display: inline-block; background: #6366F1; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: inline-block; background: #7C3AED; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
             <span style="color: white; font-size: 24px;">✦</span>
           </div>
-          <h1 style="font-size: 24px; font-weight: 700; color: #1E1B4B; margin: 0;">AIProducer</h1>
+          <h1 style="font-size: 24px; font-weight: 700; color: #1E1B4B; margin: 0;">GetProdi</h1>
         </div>
         <h2 style="font-size: 20px; color: #1E1B4B;">Оплата прошла успешно!</h2>
         <p style="color: #64748B; line-height: 1.6;">
@@ -96,7 +96,7 @@ export async function sendPaymentConfirmationEmail(
           </p>
         </div>
         <p style="color: #94A3B8; font-size: 13px; text-align: center;">
-          &copy; AIProducer ${new Date().getFullYear()}
+          &copy; GetProdi ${new Date().getFullYear()}
         </p>
       </div>
     `,

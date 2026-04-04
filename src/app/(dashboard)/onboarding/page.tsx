@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, ArrowRight } from "lucide-react"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
+import { ArrowRight } from "lucide-react"
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -147,11 +148,9 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-lg animate-fade-up text-center">
-        <div className="inline-flex items-center gap-2 mb-8">
-          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <span className="font-heading text-2xl font-bold">AIProducer</span>
+        <div className="inline-flex items-center gap-2.5 mb-8">
+          <ProdiLogo size={48} />
+          <span className="font-heading text-2xl font-bold">GetProdi</span>
         </div>
 
         <h1 className="font-heading text-4xl font-bold mb-3">

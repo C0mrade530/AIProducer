@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
-import { Sparkles, ArrowLeft } from "lucide-react"
+import { ProdiLogo } from "@/components/brand/prodi-logo"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default function PrivacyPage() {
@@ -8,11 +9,9 @@ export default function PrivacyPage() {
       {/* Nav */}
       <nav className="border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-heading text-xl font-bold">AIProducer</span>
+          <Link href="/" className="flex items-center gap-2.5 cursor-pointer">
+            <ProdiLogo size={36} />
+            <span className="font-heading text-xl font-bold">GetProdi</span>
           </Link>
           <Link href="/">
             <Button variant="ghost" size="sm" className="cursor-pointer">
@@ -31,7 +30,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-heading text-xl font-semibold mb-3">1. Общие положения</h2>
-            <p>1.1. Настоящая Политика конфиденциальности (далее — «Политика») определяет порядок обработки и защиты персональных данных пользователей (далее — «Пользователь») сервиса AIProducer (далее — «Сервис»), принадлежащего индивидуальному предпринимателю (далее — «Оператор»).</p>
+            <p>1.1. Настоящая Политика конфиденциальности (далее — «Политика») определяет порядок обработки и защиты персональных данных пользователей (далее — «Пользователь») сервиса GetProdi (далее — «Сервис»), принадлежащего индивидуальному предпринимателю (далее — «Оператор»).</p>
             <p>1.2. Регистрируясь в Сервисе, Пользователь даёт своё согласие на обработку персональных данных на условиях настоящей Политики в соответствии с Федеральным законом от 27.07.2006 N 152-ФЗ «О персональных данных».</p>
             <p>1.3. Оператор оставляет за собой право вносить изменения в настоящую Политику. Актуальная редакция всегда доступна на данной странице. Продолжение использования Сервиса после изменений означает согласие с новой редакцией.</p>
           </section>

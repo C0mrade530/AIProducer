@@ -139,8 +139,21 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}>
-        <div className="h-8 w-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: "#000000" }}>
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]" />
+        <div className="w-full max-w-lg text-center relative z-10 animate-pulse">
+          <div className="inline-flex items-center gap-2.5 mb-8">
+            <ProdiLogo size={48} />
+            <span className="font-heading text-2xl font-bold text-white">GetProdi</span>
+          </div>
+          <div className="h-10 w-64 mx-auto glass border border-gray-800/40 rounded-xl mb-4" />
+          <div className="h-5 w-48 mx-auto glass border border-gray-800/40 rounded-lg mb-8" />
+          <div className="max-w-sm mx-auto">
+            <div className="h-14 glass border border-gray-800/40 rounded-xl mb-4" />
+            <div className="h-14 glass border border-gray-800/40 rounded-xl" />
+          </div>
+        </div>
       </div>
     )
   }

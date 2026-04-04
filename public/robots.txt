@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /agent/
+Disallow: /settings
+Disallow: /tasks
+Disallow: /onboarding
+
+Sitemap: https://getprodi.ru/sitemap.xml

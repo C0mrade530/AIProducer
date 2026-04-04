@@ -1,4 +1,10 @@
+import type { Metadata } from "next"
 import { Button } from "@/components/ui/button"
+
+export const metadata: Metadata = {
+  title: "Политика конфиденциальности",
+  robots: { index: false, follow: true },
+}
 import { ProdiLogo } from "@/components/brand/prodi-logo"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"

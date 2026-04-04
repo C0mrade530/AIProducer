@@ -1,4 +1,11 @@
+import type { Metadata } from "next"
 import { ProdiLogo } from "@/components/brand/prodi-logo"
+
+export const metadata: Metadata = {
+  title: "Блог — статьи о блогинге, продажах и AI для экспертов",
+  description: "Полезные статьи для экспертов: как вести блог, создавать Reels, продавать онлайн-продукты и использовать AI для заработка.",
+  alternates: { canonical: "/blog" },
+}
 import { ArrowLeft, ArrowRight, Sparkles, Target, TrendingUp, Zap, Bot, DollarSign } from "lucide-react"
 import Link from "next/link"
 

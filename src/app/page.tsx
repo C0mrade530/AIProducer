@@ -205,6 +205,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
+      {/* Star particles — full viewport, all screen sizes */}
+      <div className="starfield" />
+
       {/* ═══ NAV ═══ */}
       <nav
         className="fixed top-0 left-0 right-0 z-50"
@@ -302,30 +305,36 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Before / After */}
+        {/* Transformation — row by row */}
         <section className="py-20 sm:py-28 px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="font-heading text-3xl sm:text-5xl font-bold mb-4 text-white">Было &rarr; Стало</h2>
-              <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto">Что меняется после прохождения 7 шагов</p>
+              <h2 className="font-heading text-3xl sm:text-5xl font-bold mb-4 text-white">Что изменится?</h2>
+              <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto">До и после прохождения 7 шагов с AI-продюсером</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="glass rounded-2xl p-6 sm:p-8 border border-red-500/20">
-                <p className="text-red-400/80 text-sm font-semibold uppercase tracking-wider mb-5">Без GetProdi</p>
-                <ul className="space-y-4">
-                  {["«Я эксперт, но не знаю как себя подать»", "Блога нет или ведётся хаотично, без плана", "Нет продукта — непонятно, что продавать", "Контент по вдохновению, Reels от случая к случаю", "Нет воронки — люди приходят и уходят", "Продажи в лоб или вообще нет продаж"].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-gray-400"><span className="text-red-400/60 mt-0.5 shrink-0">&times;</span><span className="text-sm leading-relaxed">{item}</span></li>
-                  ))}
-                </ul>
-              </div>
-              <div className="glass rounded-2xl p-6 sm:p-8 border border-emerald-500/20">
-                <p className="text-emerald-400/80 text-sm font-semibold uppercase tracking-wider mb-5">После GetProdi</p>
-                <ul className="space-y-4">
-                  {["Чёткое позиционирование — знаешь, кто ты и для кого", "Контент-план на месяц + сценарии для Reels с hooks", "Готовый продукт: программа, модули, тарифы", "Воронка, которая собирает заявки на автопилоте", "Прогрев через Stories — подписчики хотят купить", "Скрипты продаж — закрываешь в оплату уверенно"].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-gray-300"><span className="text-emerald-400 mt-0.5 shrink-0">&check;</span><span className="text-sm leading-relaxed">{item}</span></li>
-                  ))}
-                </ul>
-              </div>
+            <div className="space-y-4">
+              {[
+                { before: "Не знаю как себя подать", after: "Чёткое позиционирование и аватар клиента" },
+                { before: "Блог хаотичный, без плана", after: "Контент-план на месяц + сценарии Reels" },
+                { before: "Нет продукта для продажи", after: "Готовый продукт: программа, модули, тарифы" },
+                { before: "Нет воронки — люди уходят", after: "Воронка собирает заявки на автопилоте" },
+                { before: "Подписчики не покупают", after: "Прогрев через Stories — хотят купить сами" },
+                { before: "Не умею продавать", after: "Скрипты для переписок и созвонов" },
+              ].map((row, i) => (
+                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0 items-center">
+                  <div className="glass rounded-xl px-5 py-4 border border-red-500/10 flex items-center gap-3">
+                    <span className="text-red-400/50 text-lg shrink-0">&#x2715;</span>
+                    <span className="text-sm text-gray-400">{row.before}</span>
+                  </div>
+                  <div className="hidden md:flex items-center justify-center px-4">
+                    <ArrowRight className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="glass rounded-xl px-5 py-4 border border-emerald-500/15 flex items-center gap-3">
+                    <span className="text-emerald-400 text-lg shrink-0">&#x2713;</span>
+                    <span className="text-sm text-gray-200">{row.after}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

@@ -32,6 +32,7 @@ export default function SettingsPage() {
     bio: string
     tracker_motivation: boolean
     tracker_daily_fact: boolean
+    tracker_notify_time: string
   } | null>(null)
   const [telegram, setTelegram] = useState<{
     username: string | null
@@ -72,6 +73,7 @@ export default function SettingsPage() {
       ...profileData,
       tracker_motivation: (profileData as any).tracker_motivation ?? false,
       tracker_daily_fact: (profileData as any).tracker_daily_fact ?? false,
+      tracker_notify_time: (profileData as any).tracker_notify_time ?? "09:00",
     } : null
 
     const { data: telegramData } = await supabase
@@ -381,6 +383,27 @@ export default function SettingsPage() {
                   )
                 }
                 className="h-5 w-5 rounded border-input cursor-pointer"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium cursor-pointer" htmlFor="tracker-time">
+                  Время уведомлений
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Во сколько присылать уведомления в Telegram
+                </p>
+              </div>
+              <Input
+                type="time"
+                id="tracker-time"
+                value={profile?.tracker_notify_time || "09:00"}
+                onChange={(e) =>
+                  setProfile((p) =>
+                    p ? { ...p, tracker_notify_time: e.target.value } : p
+                  )
+                }
+                className="w-28 cursor-pointer"
               />
             </div>
             <div className="pt-2">

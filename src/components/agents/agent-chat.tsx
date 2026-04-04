@@ -18,8 +18,60 @@ import {
   X,
   ChevronRight,
   BookOpen,
+  Download,
 } from "lucide-react"
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
+
+/**
+ * Export artifact as PDF using browser print dialog.
+ * Content comes from our own AI-generated artifacts stored in the database,
+ * not from user-supplied HTML. The title is escaped for safety.
+ */
+function exportArtifactPdf(title: string, contentMd: string) {
+  const printWindow = window.open("", "_blank")
+  if (!printWindow) return
+
+  const doc = printWindow.document
+  doc.open()
+  doc.close()
+
+  // Title is escaped to prevent injection
+  const safeTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  doc.title = `${title} — AIProducer`
+
+  const style = doc.createElement("style")
+  style.textContent = `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.7; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    .meta { color: #888; font-size: 13px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #7c3aed; }
+    .content { white-space: pre-wrap; font-size: 14px; }
+    .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #888; }
+    @media print { body { margin: 0; } }
+  `
+  doc.head.appendChild(style)
+
+  const heading = doc.createElement("h1")
+  heading.textContent = title
+  doc.body.appendChild(heading)
+
+  const meta = doc.createElement("p")
+  meta.className = "meta"
+  meta.textContent = `AIProducer • ${new Date().toLocaleDateString("ru-RU")}`
+  doc.body.appendChild(meta)
+
+  // Render content as plain text with pre-wrap (preserves markdown formatting)
+  const content = doc.createElement("div")
+  content.className = "content"
+  content.textContent = contentMd
+  doc.body.appendChild(content)
+
+  const footer = doc.createElement("div")
+  footer.className = "footer"
+  footer.textContent = "Сгенерировано в AIProducer"
+  doc.body.appendChild(footer)
+
+  setTimeout(() => printWindow.print(), 300)
+}
 
 // Fallback greetings if API fails
 const AGENT_GREETINGS: Record<string, string> = {
@@ -523,14 +575,23 @@ export function AgentChat({
                     <h4 className="text-sm font-medium truncate">
                       {artifact.title}
                     </h4>
-                    <Badge
-                      variant={
-                        artifact.status === "final" ? "success" : "muted"
-                      }
-                      className="text-[10px] shrink-0"
-                    >
-                      {artifact.status === "final" ? "Готово" : "Черновик"}
-                    </Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => exportArtifactPdf(artifact.title, artifact.content_md)}
+                        className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
+                        title="Экспорт в PDF"
+                      >
+                        <Download className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                      <Badge
+                        variant={
+                          artifact.status === "final" ? "success" : "muted"
+                        }
+                        className="text-[10px]"
+                      >
+                        {artifact.status === "final" ? "Готово" : "Черновик"}
+                      </Badge>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-6 whitespace-pre-wrap">
                     {artifact.content_md}

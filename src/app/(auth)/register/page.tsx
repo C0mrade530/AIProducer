@@ -32,6 +32,7 @@ function RegisterForm() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
         data: {
           referral_code: refCode || undefined,
         },

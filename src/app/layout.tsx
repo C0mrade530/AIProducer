@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "GetProdi" }],
   creator: "GetProdi",
+  verification: {
+    yandex: "f7f8286786a36e2e",
+  },
   openGraph: {
     type: "website",
     locale: "ru_RU",

@@ -205,8 +205,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-white overflow-x-hidden">
-      {/* Star particles — full viewport, all screen sizes */}
-      <div className="starfield">
+      {/* Star particles — covers entire page, visible through all sections */}
+      <div className="starfield" style={{ height: "100%", position: "fixed" }}>
         <div className="star-layer" />
       </div>
 
@@ -273,16 +273,14 @@ export default function LandingPage() {
 
       {/* ═══ CONTENT ═══ */}
       <div className="relative z-10" style={{ marginTop: "-8vh" }}>
-        {/* Continuous dark background */}
-        <div className="absolute inset-0 -z-20 bg-[#000000]" />
+        {/* Semi-transparent background — starfield particles visible through */}
+        <div className="absolute inset-0 -z-20 bg-[#000000]/90" />
 
-        {/* Ambient glow orbs throughout the page */}
-        <div className="absolute top-[5%] right-[10%] w-[500px] h-[500px] bg-violet-600/[0.04] rounded-full blur-[150px] -z-10 pointer-events-none" />
-        <div className="absolute top-[20%] left-[5%] w-[400px] h-[400px] bg-blue-600/[0.03] rounded-full blur-[130px] -z-10 pointer-events-none" />
-        <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-violet-500/[0.03] rounded-full blur-[120px] -z-10 pointer-events-none" />
-        <div className="absolute top-[55%] left-[15%] w-[450px] h-[450px] bg-blue-500/[0.04] rounded-full blur-[140px] -z-10 pointer-events-none" />
-        <div className="absolute top-[70%] right-[5%] w-[300px] h-[300px] bg-violet-600/[0.03] rounded-full blur-[100px] -z-10 pointer-events-none" />
-        <div className="absolute top-[85%] left-[25%] w-[400px] h-[400px] bg-blue-600/[0.03] rounded-full blur-[130px] -z-10 pointer-events-none" />
+        {/* Ambient glow orbs */}
+        <div className="absolute top-[5%] right-[10%] w-[500px] h-[500px] bg-violet-600/[0.05] rounded-full blur-[150px] -z-10 pointer-events-none" />
+        <div className="absolute top-[25%] left-[5%] w-[400px] h-[400px] bg-blue-600/[0.04] rounded-full blur-[130px] -z-10 pointer-events-none" />
+        <div className="absolute top-[50%] right-[15%] w-[350px] h-[350px] bg-violet-500/[0.04] rounded-full blur-[120px] -z-10 pointer-events-none" />
+        <div className="absolute top-[75%] left-[10%] w-[450px] h-[450px] bg-blue-500/[0.04] rounded-full blur-[140px] -z-10 pointer-events-none" />
 
         {/* Pipeline mini-bar */}
         <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">

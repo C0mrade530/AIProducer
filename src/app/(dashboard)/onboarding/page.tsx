@@ -8,9 +8,25 @@ import { Input } from "@/components/ui/input"
 import { ProdiLogo } from "@/components/brand/prodi-logo"
 import { ArrowRight } from "lucide-react"
 
+const NICHES = [
+  "Коучинг и консалтинг",
+  "Психология и терапия",
+  "Фитнес и здоровье",
+  "Маркетинг и SMM",
+  "Образование и репетиторство",
+  "Бизнес и предпринимательство",
+  "Дизайн и креатив",
+  "IT и программирование",
+  "Финансы и инвестиции",
+  "Другое",
+]
+
 export default function OnboardingPage() {
   const router = useRouter()
+  const [step, setStep] = useState(1) // 1 = name, 2 = niche
   const [name, setName] = useState("")
+  const [niche, setNiche] = useState("")
+  const [customNiche, setCustomNiche] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [checking, setChecking] = useState(true)
@@ -38,6 +54,13 @@ export default function OnboardingPage() {
     setChecking(false)
   }
 
+  const goToStep2 = () => {
+    if (!name.trim()) return
+    setStep(2)
+  }
+
+  const finalNiche = niche === "Другое" ? customNiche.trim() : niche
+
   const handleComplete = async () => {
     if (!name.trim() || submittedRef.current) return
     submittedRef.current = true
@@ -57,19 +80,24 @@ export default function OnboardingPage() {
         .maybeSingle()
 
       if (existingWs) {
-        await supabase.from("profiles").update({ name: name.trim(), onboarding_completed: true }).eq("id", user.id)
+        await supabase.from("profiles").update({
+          name: name.trim(),
+          niche: finalNiche,
+          onboarding_completed: true,
+        }).eq("id", user.id)
+        // Update workspace niche too
+        await supabase.from("workspaces").update({ niche: finalNiche }).eq("id", existingWs.id)
         window.location.href = "/pricing?onboarding=1"
         return
       }
 
-      // Create workspace — INSERT then SELECT separately to avoid RLS issue
+      // Create workspace
       const { error: wsError } = await supabase
         .from("workspaces")
-        .insert({ owner_id: user.id, title: name.trim(), niche: "" })
+        .insert({ owner_id: user.id, title: name.trim(), niche: finalNiche })
 
       if (wsError) throw new Error(wsError.message)
 
-      // Now SELECT it back (RLS allows owner to SELECT)
       const { data: workspace } = await supabase
         .from("workspaces")
         .select("id")
@@ -78,7 +106,6 @@ export default function OnboardingPage() {
 
       if (!workspace) throw new Error("Workspace не найден после создания")
 
-      // Create related records (NO subscription — user must pay first)
       const [membersRes, projectsRes] = await Promise.all([
         supabase.from("workspace_members").insert({
           workspace_id: workspace.id,
@@ -94,13 +121,14 @@ export default function OnboardingPage() {
       if (membersRes.error) console.error("members:", membersRes.error)
       if (projectsRes.error) console.error("projects:", projectsRes.error)
 
-      // Mark onboarding complete LAST
       await supabase.from("profiles").update({
         name: name.trim(),
+        niche: finalNiche,
+        email: user.email,
         onboarding_completed: true,
       }).eq("id", user.id)
 
-      // Process referral if user was referred
+      // Process referral
       try {
         const refCode = user.user_metadata?.referral_code
         if (refCode) {
@@ -120,7 +148,7 @@ export default function OnboardingPage() {
           }
         }
       } catch {
-        // Non-critical — referral can fail silently
+        // Non-critical
       }
 
       window.location.href = "/pricing?onboarding=1"
@@ -134,7 +162,10 @@ export default function OnboardingPage() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && name.trim()) handleComplete()
+    if (e.key === "Enter" && name.trim()) {
+      if (step === 1) goToStep2()
+      else handleComplete()
+    }
   }
 
   if (checking) {
@@ -169,34 +200,111 @@ export default function OnboardingPage() {
           <span className="font-heading text-2xl font-bold text-white">GetProdi</span>
         </div>
 
-        <h1 className="font-heading text-4xl font-bold mb-3 text-white">
-          Как тебя зовут?
-        </h1>
-        <p className="text-gray-400 text-lg mb-8">
-          Так к тебе будут обращаться AI-агенты
-        </p>
-
-        <div className="max-w-sm mx-auto">
-          <Input
-            placeholder="Введи своё имя"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            className="text-center text-lg h-14 mb-4 bg-gray-900/50 border-gray-700/50 text-white placeholder:text-gray-500"
-          />
-          {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
-          <Button
-            onClick={handleComplete}
-            disabled={!name.trim() || loading}
-            loading={loading}
-            size="xl"
-            className="w-full cursor-pointer rounded-xl"
-          >
-            Начать
-            <ArrowRight className="h-5 w-5" />
-          </Button>
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <div className={`h-1.5 w-8 rounded-full transition-colors ${step >= 1 ? "bg-violet-500" : "bg-gray-700"}`} />
+          <div className={`h-1.5 w-8 rounded-full transition-colors ${step >= 2 ? "bg-violet-500" : "bg-gray-700"}`} />
         </div>
+
+        {step === 1 ? (
+          <>
+            <h1 className="font-heading text-4xl font-bold mb-3 text-white">
+              Как тебя зовут?
+            </h1>
+            <p className="text-gray-400 text-lg mb-8">
+              Так к тебе будут обращаться AI-агенты
+            </p>
+
+            <div className="max-w-sm mx-auto">
+              <Input
+                placeholder="Введи своё имя"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                className="text-center text-lg h-14 mb-4 bg-gray-900/50 border-gray-700/50 text-white placeholder:text-gray-500"
+              />
+              <Button
+                onClick={goToStep2}
+                disabled={!name.trim()}
+                size="xl"
+                className="w-full cursor-pointer rounded-xl"
+              >
+                Далее
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="font-heading text-4xl font-bold mb-3 text-white">
+              Твоя ниша
+            </h1>
+            <p className="text-gray-400 text-lg mb-8">
+              Это поможет агентам лучше понять тебя
+            </p>
+
+            <div className="max-w-md mx-auto">
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {NICHES.map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setNiche(n)}
+                    className={`px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer border ${
+                      niche === n
+                        ? "bg-violet-500/20 border-violet-500/50 text-white"
+                        : "bg-gray-900/50 border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-white"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+
+              {niche === "Другое" && (
+                <Input
+                  placeholder="Укажи свою нишу"
+                  value={customNiche}
+                  onChange={(e) => setCustomNiche(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  className="text-center text-lg h-14 mb-4 bg-gray-900/50 border-gray-700/50 text-white placeholder:text-gray-500"
+                />
+              )}
+
+              {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep(1)}
+                  size="xl"
+                  className="cursor-pointer rounded-xl"
+                >
+                  Назад
+                </Button>
+                <Button
+                  onClick={handleComplete}
+                  disabled={loading}
+                  loading={loading}
+                  size="xl"
+                  className="flex-1 cursor-pointer rounded-xl"
+                >
+                  Начать
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <button
+                onClick={handleComplete}
+                disabled={loading}
+                className="text-xs text-gray-600 hover:text-gray-400 mt-3 cursor-pointer transition-colors"
+              >
+                Пропустить этот шаг
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

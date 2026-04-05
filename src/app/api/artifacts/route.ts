@@ -174,6 +174,65 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * PATCH /api/artifacts — обновить артефакт (title, content_md, status)
+ */
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const { artifactId, title, contentMd, status } = body
+
+  if (!artifactId) {
+    return NextResponse.json({ error: "Missing artifactId" }, { status: 400 })
+  }
+
+  // Build update object
+  const updates: Record<string, unknown> = {}
+  if (title !== undefined) updates.title = title
+  if (contentMd !== undefined) updates.content_md = contentMd
+  if (status !== undefined) updates.status = status
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 })
+  }
+
+  const { data: artifact, error } = await supabase
+    .from("artifacts")
+    .update(updates)
+    .eq("id", artifactId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Artifact update error:", error)
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 })
+  }
+
+  // Save new version if content changed
+  if (contentMd !== undefined) {
+    const { count } = await supabase
+      .from("artifact_versions")
+      .select("id", { count: "exact", head: true })
+      .eq("artifact_id", artifactId)
+
+    await supabase.from("artifact_versions").insert({
+      artifact_id: artifactId,
+      version: (count || 0) + 1,
+      content_md: contentMd,
+      content_json: artifact.content_json || {},
+    })
+  }
+
+  return NextResponse.json({ artifact })
+}
+
+/**
  * FIX #7: Extract actionable tasks from artifact markdown content
  * Looks for bullet points, numbered lists, and action items
  */

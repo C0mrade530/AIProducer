@@ -21,6 +21,8 @@ import {
   Download,
   Mic,
   Loader2,
+  Pencil,
+  FileDown,
 } from "lucide-react"
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder"
@@ -223,6 +225,12 @@ export function AgentChat({
   // Upsell modal
   const [showUpsell, setShowUpsell] = useState(false)
   const [upsellVariant, setUpsellVariant] = useState<"free-ended" | "tracker" | "project-limit" | "subscription-expired">("free-ended")
+
+  // Artifact editing
+  const [editingArtifactId, setEditingArtifactId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [editTitle, setEditTitle] = useState("")
+  const [savingEdit, setSavingEdit] = useState(false)
 
   // Voice recording
   const handleVoiceTranscript = useCallback((text: string) => {
@@ -784,38 +792,132 @@ export function AgentChat({
             </div>
           ) : (
             <div className="p-4 space-y-3 flex-1">
-              {artifacts.map((artifact) => (
-                <div
-                  key={artifact.id}
-                  className="rounded-lg border p-4 space-y-2 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-sm font-medium truncate">
-                      {artifact.title}
-                    </h4>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => exportArtifactPdf(artifact.title, artifact.content_md, agentConfig.name)}
-                        className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
-                        title="Экспорт в PDF"
-                      >
-                        <Download className="h-3 w-3 text-muted-foreground" />
-                      </button>
-                      <Badge
-                        variant={
-                          artifact.status === "final" ? "success" : "muted"
-                        }
-                        className="text-[10px]"
-                      >
-                        {artifact.status === "final" ? "Готово" : "Черновик"}
-                      </Badge>
-                    </div>
+              {artifacts.map((artifact) => {
+                const isEditing = editingArtifactId === artifact.id
+
+                const startEdit = () => {
+                  setEditingArtifactId(artifact.id)
+                  setEditTitle(artifact.title)
+                  setEditContent(artifact.content_md)
+                }
+
+                const cancelEdit = () => {
+                  setEditingArtifactId(null)
+                  setEditContent("")
+                  setEditTitle("")
+                }
+
+                const saveEdit = async () => {
+                  setSavingEdit(true)
+                  try {
+                    const res = await fetch("/api/artifacts", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        artifactId: artifact.id,
+                        title: editTitle.trim(),
+                        contentMd: editContent,
+                      }),
+                    })
+                    if (res.ok) {
+                      const data = await res.json()
+                      setArtifacts((prev) =>
+                        prev.map((a) => (a.id === artifact.id ? { ...a, title: data.artifact.title, content_md: data.artifact.content_md } : a))
+                      )
+                      setEditingArtifactId(null)
+                    }
+                  } catch (err) {
+                    console.error("Edit artifact error:", err)
+                  } finally {
+                    setSavingEdit(false)
+                  }
+                }
+
+                const exportMarkdown = () => {
+                  const blob = new Blob([artifact.content_md], { type: "text/markdown" })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `${artifact.title.replace(/[^\w\sа-яёА-ЯЁ-]/g, "").trim()}.md`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }
+
+                return (
+                  <div
+                    key={artifact.id}
+                    className="rounded-lg border p-4 space-y-2 hover:bg-muted/30 transition-colors"
+                  >
+                    {isEditing ? (
+                      // ── Edit mode ──
+                      <div className="space-y-3">
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="text-sm font-medium"
+                          placeholder="Название"
+                        />
+                        <Textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="text-xs min-h-[120px] max-h-[300px] resize-y"
+                          rows={6}
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={saveEdit} loading={savingEdit} className="cursor-pointer">
+                            <Save className="h-3 w-3" />
+                            Сохранить
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={cancelEdit} className="cursor-pointer">
+                            Отмена
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // ── View mode ──
+                      <>
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-medium truncate">
+                            {artifact.title}
+                          </h4>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={startEdit}
+                              className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
+                              title="Редактировать"
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={() => exportArtifactPdf(artifact.title, artifact.content_md, agentConfig.name)}
+                              className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
+                              title="Экспорт в PDF"
+                            >
+                              <Download className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={exportMarkdown}
+                              className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
+                              title="Скачать .md"
+                            >
+                              <FileDown className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <Badge
+                              variant={artifact.status === "final" ? "success" : "muted"}
+                              className="text-[10px]"
+                            >
+                              {artifact.status === "final" ? "Готово" : "Черновик"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-6 whitespace-pre-wrap">
+                          {artifact.content_md}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-6 whitespace-pre-wrap">
-                    {artifact.content_md}
-                  </p>
-                </div>
-              ))}
+                )
+              })}
 
               {/* Go to next agent button */}
               {artifacts.length > 0 && nextAgent && (

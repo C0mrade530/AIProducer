@@ -77,6 +77,71 @@ export async function sendWelcomeEmail(to: string, name: string) {
   })
 }
 
+export async function sendSubscriptionExpiringEmail(
+  to: string,
+  name: string,
+  plan: string,
+  daysLeft: number
+) {
+  const planLabels: Record<string, string> = {
+    starter: "Starter",
+    pro: "Pro",
+    premium: "Premium",
+  }
+
+  const urgency = daysLeft <= 1
+    ? "Сегодня последний день подписки!"
+    : `До окончания подписки осталось ${daysLeft} дн.`
+
+  return sendEmail({
+    to,
+    subject: urgency,
+    html: emailWrapper(`
+      <h1 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0;">${urgency}</h1>
+      <div style="height: 2px; background: linear-gradient(90deg, #f59e0b, #ef4444, transparent); border-radius: 2px; margin-bottom: 20px;"></div>
+      <p style="color: #a0a0b0; line-height: 1.7; font-size: 15px; margin: 0 0 16px 0;">
+        ${name}, твоя подписка <strong style="color: #e0e0e0;">${planLabels[plan] || plan}</strong> истекает ${daysLeft <= 1 ? "сегодня" : `через ${daysLeft} дней`}.
+      </p>
+      <p style="color: #a0a0b0; line-height: 1.7; font-size: 15px; margin: 0 0 24px 0;">
+        Продли подписку, чтобы не потерять доступ к AI-агентам и сохранённым артефактам.
+      </p>
+      <div style="text-align: center; margin: 28px 0 8px 0;">
+        <a href="${APP_URL}/pricing"
+           style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #3b82f6); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 15px;">
+          Продлить подписку
+        </a>
+      </div>
+    `),
+  })
+}
+
+export async function sendNudgeEmail(
+  to: string,
+  name: string,
+  subject: string,
+  body: string,
+  ctaText: string,
+  ctaUrl: string
+) {
+  return sendEmail({
+    to,
+    subject,
+    html: emailWrapper(`
+      <h1 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0;">Привет, ${name}!</h1>
+      <div style="height: 2px; background: linear-gradient(90deg, #7c3aed, #3b82f6, transparent); border-radius: 2px; margin-bottom: 20px;"></div>
+      <p style="color: #a0a0b0; line-height: 1.7; font-size: 15px; margin: 0 0 24px 0;">
+        ${body}
+      </p>
+      <div style="text-align: center; margin: 28px 0 8px 0;">
+        <a href="${ctaUrl}"
+           style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #3b82f6); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 15px;">
+          ${ctaText}
+        </a>
+      </div>
+    `),
+  })
+}
+
 export async function sendPaymentConfirmationEmail(
   to: string,
   name: string,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getPayment } from "@/lib/payments/yookassa"
+import { sendPaymentConfirmationEmail } from "@/lib/email/resend"
 
 /**
  * POST /api/payments/webhook — YooKassa webhook handler
@@ -67,6 +68,9 @@ export async function POST(request: NextRequest) {
       })
       .eq("yookassa_payment_id", paymentObject.id)
 
+    // Save payment_method_id for recurring payments
+    const paymentMethodId = verifiedPayment.payment_method?.id || (verifiedPayment as any).payment_method_id || null
+
     // Create or update subscription
     const { data: existingSub } = await supabase
       .from("subscriptions")
@@ -74,29 +78,40 @@ export async function POST(request: NextRequest) {
       .eq("workspace_id", workspaceId)
       .single()
 
+    const periodDays = parseInt(metadata.period_days || "30", 10)
     const now = new Date()
     const periodEnd = new Date(now)
-    periodEnd.setDate(periodEnd.getDate() + 30)
+    periodEnd.setDate(periodEnd.getDate() + periodDays)
+
+    const subData = {
+      plan,
+      status: "active",
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+      ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
+    }
 
     if (existingSub) {
       await supabase
         .from("subscriptions")
-        .update({
-          plan,
-          status: "active",
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          cancel_at_period_end: false,
-        })
+        .update(subData)
         .eq("id", existingSub.id)
     } else {
       await supabase.from("subscriptions").insert({
         workspace_id: workspaceId,
-        plan,
-        status: "active",
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
+        ...subData,
       })
+    }
+
+    // Send payment confirmation email (non-blocking)
+    if (metadata.user_email) {
+      sendPaymentConfirmationEmail(
+        metadata.user_email,
+        metadata.user_name || "Эксперт",
+        plan,
+        parseFloat(verifiedPayment.amount?.value || "0")
+      ).catch((err) => console.error("Payment email error:", err))
     }
 
     // Track referral conversion: when referred user pays, update referral status

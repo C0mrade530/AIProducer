@@ -6,66 +6,9 @@ export const metadata: Metadata = {
   description: "Полезные статьи для экспертов: как вести блог, создавать Reels, продавать онлайн-продукты и использовать AI для заработка.",
   alternates: { canonical: "/blog" },
 }
-import { ArrowLeft, ArrowRight, Sparkles, Target, TrendingUp, Zap, Bot, DollarSign } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import Link from "next/link"
-
-const articles = [
-  {
-    slug: "why-experts-fail",
-    title: "Почему 90% экспертов не зарабатывают на своих знаниях",
-    excerpt: "Разбираем главные ошибки экспертов, которые мешают монетизировать опыт. Отсутствие системы, хаотичный контент и страх продаж — как с этим справиться.",
-    date: "3 апреля 2026",
-    category: "Стратегия",
-    icon: Target,
-    color: "text-blue-400",
-    bg: "bg-blue-500/15",
-    featured: true,
-  },
-  {
-    slug: "reels-that-sell",
-    title: "Reels, которые продают: 5 формул для экспертов",
-    excerpt: "Как создавать Reels, которые не просто набирают охваты, а приводят клиентов. Проверенные формулы hooks и структуры.",
-    date: "2 апреля 2026",
-    category: "Контент",
-    icon: TrendingUp,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/15",
-    featured: false,
-  },
-  {
-    slug: "ai-vs-producer",
-    title: "AI-продюсер vs живой продюсер: что выбрать в 2026",
-    excerpt: "Сравниваем стоимость, скорость и качество работы AI-агентов с командой из продюсера, методолога и маркетолога.",
-    date: "1 апреля 2026",
-    category: "Продукт",
-    icon: Bot,
-    color: "text-cyan-400",
-    bg: "bg-cyan-500/15",
-    featured: false,
-  },
-  {
-    slug: "first-online-product",
-    title: "Как создать первый онлайн-продукт за 7 дней",
-    excerpt: "Пошаговый гайд: от идеи до готового продукта с тарифами. Без опыта в инфобизнесе, без команды, с помощью AI.",
-    date: "30 марта 2026",
-    category: "Гайд",
-    icon: Sparkles,
-    color: "text-violet-400",
-    bg: "bg-violet-500/15",
-    featured: false,
-  },
-  {
-    slug: "sales-scripts-guide",
-    title: "Скрипты продаж для экспертов: как закрывать в оплату",
-    excerpt: "Готовые скрипты для переписки в Direct, созвонов и дожима. Как продавать уверенно без ощущения навязчивости.",
-    date: "28 марта 2026",
-    category: "Продажи",
-    icon: DollarSign,
-    color: "text-amber-400",
-    bg: "bg-amber-500/15",
-    featured: false,
-  },
-]
+import { articles } from "@/lib/blog/articles"
 
 export default function BlogPage() {
   const featured = articles.find((a) => a.featured)!

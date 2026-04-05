@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { sendWelcomeEmail } from "@/lib/email/resend"
+import { trackEvent } from "@/lib/analytics/track"
 
 /**
  * POST /api/onboarding — Complete onboarding
@@ -75,11 +77,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Mark onboarding complete
+    // Mark onboarding complete + save email for transactional emails
     await supabase.from("profiles").update({
       name: name.trim(),
+      email: user.email,
       onboarding_completed: true,
     }).eq("id", user.id)
+
+    // Track + send welcome email (non-blocking)
+    trackEvent(supabase, "onboarding_complete", { name: name.trim() }, workspace.id)
+    sendWelcomeEmail(user.email!, name.trim()).catch((err) =>
+      console.error("Welcome email error:", err)
+    )
 
     return NextResponse.json({ ok: true, workspaceId: workspace.id })
   } catch (err) {

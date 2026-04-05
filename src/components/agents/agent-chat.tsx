@@ -19,58 +19,145 @@ import {
   ChevronRight,
   BookOpen,
   Download,
+  Mic,
+  Loader2,
 } from "lucide-react"
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder"
+import { UpsellModal } from "@/components/upsell-modal"
 
 /**
- * Export artifact as PDF using browser print dialog.
- * Content comes from our own AI-generated artifacts stored in the database,
- * not from user-supplied HTML. The title is escaped for safety.
+ * Export artifact as branded PDF using jsPDF.
+ * Content comes from our own AI-generated artifacts stored in the database.
  */
-function exportArtifactPdf(title: string, contentMd: string) {
-  const printWindow = window.open("", "_blank")
-  if (!printWindow) return
+async function exportArtifactPdf(title: string, contentMd: string, agentName?: string) {
+  const { default: jsPDF } = await import("jspdf")
 
-  const doc = printWindow.document
-  doc.open()
-  doc.close()
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+  const pageW = pdf.internal.pageSize.getWidth()
+  const pageH = pdf.internal.pageSize.getHeight()
+  const margin = 20
+  const contentW = pageW - margin * 2
+  const date = new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
 
-  // Title is escaped to prevent injection
-  const safeTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-  doc.title = `${title} — GetProdi`
+  // ── Colors ──
+  const bg: [number, number, number] = [10, 10, 26]       // #0a0a1a
+  const textMain: [number, number, number] = [230, 230, 240]
+  const textMuted: [number, number, number] = [140, 140, 160]
+  const accentViolet: [number, number, number] = [139, 92, 246]
+  const accentBlue: [number, number, number] = [59, 130, 246]
 
-  const style = doc.createElement("style")
-  style.textContent = `
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.7; }
-    h1 { font-size: 24px; margin-bottom: 8px; }
-    .meta { color: #888; font-size: 13px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #7c3aed; }
-    .content { white-space: pre-wrap; font-size: 14px; }
-    .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #888; }
-    @media print { body { margin: 0; } }
-  `
-  doc.head.appendChild(style)
+  function drawBackground() {
+    pdf.setFillColor(...bg)
+    pdf.rect(0, 0, pageW, pageH, "F")
+  }
 
-  const heading = doc.createElement("h1")
-  heading.textContent = title
-  doc.body.appendChild(heading)
+  function drawFooter(pageNum: number, totalPages: number) {
+    // Gradient line
+    const lineY = pageH - 15
+    pdf.setDrawColor(...accentViolet)
+    pdf.setLineWidth(0.3)
+    pdf.line(margin, lineY, pageW - margin, lineY)
 
-  const meta = doc.createElement("p")
-  meta.className = "meta"
-  meta.textContent = `GetProdi • ${new Date().toLocaleDateString("ru-RU")}`
-  doc.body.appendChild(meta)
+    // Footer text
+    pdf.setFontSize(8)
+    pdf.setTextColor(...textMuted)
+    pdf.text("getprodi.ru", margin, pageH - 10)
+    pdf.text(`${pageNum} / ${totalPages}`, pageW - margin, pageH - 10, { align: "right" })
+  }
 
-  // Render content as plain text with pre-wrap (preserves markdown formatting)
-  const content = doc.createElement("div")
-  content.className = "content"
-  content.textContent = contentMd
-  doc.body.appendChild(content)
+  // ── Page 1: Cover ──
+  drawBackground()
 
-  const footer = doc.createElement("div")
-  footer.className = "footer"
-  footer.textContent = "Сгенерировано в GetProdi"
-  doc.body.appendChild(footer)
+  // Logo mark (simple play triangle)
+  const logoX = margin
+  const logoY = 30
+  pdf.setFillColor(255, 255, 255)
+  pdf.triangle(logoX + 2, logoY, logoX + 12, logoY + 6, logoX + 2, logoY + 12, "F")
 
-  setTimeout(() => printWindow.print(), 300)
+  // Brand name
+  pdf.setFontSize(22)
+  pdf.setTextColor(255, 255, 255)
+  pdf.text("GetProdi", logoX + 16, logoY + 9)
+
+  // Gradient accent line under header
+  pdf.setDrawColor(...accentViolet)
+  pdf.setLineWidth(0.8)
+  pdf.line(margin, 50, margin + 60, 50)
+  pdf.setDrawColor(...accentBlue)
+  pdf.line(margin + 60, 50, margin + 100, 50)
+
+  // Title
+  pdf.setFontSize(20)
+  pdf.setTextColor(...textMain)
+  const titleLines = pdf.splitTextToSize(title, contentW)
+  pdf.text(titleLines, margin, 65)
+
+  // Meta info
+  const metaY = 65 + titleLines.length * 9 + 8
+  pdf.setFontSize(10)
+  pdf.setTextColor(...textMuted)
+  const metaParts = [date]
+  if (agentName) metaParts.unshift(agentName)
+  pdf.text(metaParts.join("  ·  "), margin, metaY)
+
+  // Divider
+  pdf.setDrawColor(...accentViolet)
+  pdf.setLineWidth(0.3)
+  pdf.line(margin, metaY + 5, pageW - margin, metaY + 5)
+
+  // ── Content ──
+  let cursorY = metaY + 14
+  pdf.setFontSize(10)
+  pdf.setTextColor(...textMain)
+
+  const lines = contentMd.split("\n")
+  let pageCount = 1
+
+  for (const rawLine of lines) {
+    const isHeading = /^#{1,3}\s/.test(rawLine)
+    const cleanLine = rawLine.replace(/^#{1,3}\s/, "").replace(/\*\*/g, "")
+
+    if (isHeading) {
+      pdf.setFontSize(13)
+      pdf.setTextColor(...accentViolet)
+    } else {
+      pdf.setFontSize(10)
+      pdf.setTextColor(...textMain)
+    }
+
+    const wrapped = pdf.splitTextToSize(cleanLine || " ", contentW)
+    const blockH = wrapped.length * (isHeading ? 6 : 5)
+
+    // Check page break
+    if (cursorY + blockH > pageH - 20) {
+      drawFooter(pageCount, 0) // placeholder, will fix total later
+      pdf.addPage()
+      pageCount++
+      drawBackground()
+      cursorY = 20
+    }
+
+    pdf.text(wrapped, margin, cursorY)
+    cursorY += blockH + (isHeading ? 4 : 2)
+  }
+
+  // ── Fix footers with correct total ──
+  const totalPages = pdf.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i)
+    if (i === 1) {
+      // Cover page footer
+      pdf.setFontSize(8)
+      pdf.setTextColor(...textMuted)
+      pdf.text("getprodi.ru", margin, pageH - 10)
+    }
+    drawFooter(i, totalPages)
+  }
+
+  // ── Download ──
+  const safeFilename = title.replace(/[^\w\sа-яёА-ЯЁ-]/g, "").trim().substring(0, 50)
+  pdf.save(`${safeFilename} — GetProdi.pdf`)
 }
 
 // Fallback greetings if API fails
@@ -133,6 +220,25 @@ export function AgentChat({
   // Next agent prompt
   const [showNextAgent, setShowNextAgent] = useState(false)
 
+  // Upsell modal
+  const [showUpsell, setShowUpsell] = useState(false)
+  const [upsellVariant, setUpsellVariant] = useState<"free-ended" | "tracker" | "project-limit" | "subscription-expired">("free-ended")
+
+  // Voice recording
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInput(text)
+    // Auto-send after a tick so state updates
+    setTimeout(() => {
+      setInput("")
+      setMessages((prev) => [...prev, { role: "user", content: text }])
+      sendVoiceMessage(text)
+    }, 50)
+  }, [])
+
+  const { isRecording, isTranscribing, toggleRecording } = useVoiceRecorder({
+    onTranscript: handleVoiceTranscript,
+  })
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -170,6 +276,13 @@ export function AgentChat({
       if (!res.ok) {
         if (res.status === 403 || res.status === 429) {
           const errData = await res.json().catch(() => null)
+          if (errData?.upsell) {
+            const variant = res.status === 429 ? "project-limit"
+              : agentCode === "unpacker" ? "free-ended"
+              : "subscription-expired"
+            setUpsellVariant(variant)
+            setShowUpsell(true)
+          }
           throw new Error(errData?.error || "Нет доступа")
         }
         throw new Error("Failed")
@@ -240,6 +353,13 @@ export function AgentChat({
       if (!res.ok) {
         if (res.status === 403 || res.status === 429) {
           const errData = await res.json().catch(() => null)
+          if (errData?.upsell) {
+            const variant = res.status === 429 ? "project-limit"
+              : agentCode === "unpacker" ? "free-ended"
+              : "subscription-expired"
+            setUpsellVariant(variant)
+            setShowUpsell(true)
+          }
           throw new Error(errData?.error || "Нет доступа")
         }
         throw new Error("Failed to send")
@@ -291,6 +411,76 @@ export function AgentChat({
           role: "assistant",
           content: "Произошла ошибка. Попробуйте ещё раз.",
         }
+        return updated
+      })
+    } finally {
+      setIsStreaming(false)
+    }
+  }
+
+  // Send voice-transcribed message directly
+  const sendVoiceMessage = async (text: string) => {
+    if (!text.trim() || isStreaming) return
+    setIsStreaming(true)
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }])
+
+    try {
+      const res = await fetch(`/api/agents/${agentCode}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, projectId, runId }),
+      })
+
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 429) {
+          const errData = await res.json().catch(() => null)
+          if (errData?.upsell) {
+            const variant = res.status === 429 ? "project-limit"
+              : agentCode === "unpacker" ? "free-ended"
+              : "subscription-expired"
+            setUpsellVariant(variant)
+            setShowUpsell(true)
+          }
+          throw new Error(errData?.error || "Нет доступа")
+        }
+        throw new Error("Failed to send")
+      }
+
+      const newRunId = res.headers.get("X-Run-Id")
+      if (newRunId && !runId) setRunId(newRunId)
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ""
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const text = decoder.decode(value)
+          for (const line of text.split("\n")) {
+            if (line.startsWith("data: ") && line !== "data: [DONE]") {
+              try {
+                const data = JSON.parse(line.slice(6))
+                const delta = data.choices?.[0]?.delta?.content
+                if (delta) {
+                  fullContent += delta
+                  setMessages((prev) => {
+                    const updated = [...prev]
+                    updated[updated.length - 1] = { role: "assistant", content: fullContent }
+                    return updated
+                  })
+                }
+              } catch { /* skip */ }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error)
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: "assistant", content: "Произошла ошибка. Попробуйте ещё раз." }
         return updated
       })
     } finally {
@@ -503,23 +693,51 @@ export function AgentChat({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Напишите сообщение..."
-              className="pr-14 min-h-[52px] max-h-[200px] resize-none rounded-xl text-base bg-white/5 border-gray-800/60 focus:border-violet-500/40"
+              className="pr-24 min-h-[52px] max-h-[200px] resize-none rounded-xl text-base bg-white/5 border-gray-800/60 focus:border-violet-500/40"
               rows={1}
               disabled={isStreaming}
             />
-            <Button
-              size="icon"
-              onClick={handleSend}
-              disabled={!input.trim() || isStreaming}
-              className="absolute right-2 bottom-2 h-9 w-9 rounded-lg cursor-pointer shadow-[0_0_12px_hsl(262_85%_62%/0.3)]"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
+              {/* Voice recording button */}
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isStreaming || isTranscribing}
+                className={cn(
+                  "h-9 w-9 rounded-lg flex items-center justify-center transition-all cursor-pointer",
+                  isRecording
+                    ? "bg-red-500/20 text-red-400 voice-recording-pulse"
+                    : isTranscribing
+                      ? "bg-white/5 text-muted-foreground"
+                      : "bg-white/5 text-muted-foreground hover:text-primary hover:bg-white/10"
+                )}
+                title={isRecording ? "Остановить запись" : "Голосовой ввод"}
+              >
+                {isTranscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mic className={cn("h-4 w-4", isRecording && "animate-pulse")} />
+                )}
+              </button>
+              {/* Send button */}
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={!input.trim() || isStreaming}
+                className="h-9 w-9 rounded-lg cursor-pointer shadow-[0_0_12px_hsl(262_85%_62%/0.3)]"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <p className="text-center text-[11px] text-muted-foreground mt-2">
-            {isStreaming
-              ? "Агент думает..."
-              : "Enter — отправить, Shift+Enter — новая строка"}
+            {isRecording
+              ? "Говорите... нажмите для остановки"
+              : isTranscribing
+                ? "Распознаю речь..."
+                : isStreaming
+                  ? "Агент думает..."
+                  : "Enter — отправить, Shift+Enter — новая строка"}
           </p>
         </div>
       </div>
@@ -577,7 +795,7 @@ export function AgentChat({
                     </h4>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={() => exportArtifactPdf(artifact.title, artifact.content_md)}
+                        onClick={() => exportArtifactPdf(artifact.title, artifact.content_md, agentConfig.name)}
                         className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center cursor-pointer"
                         title="Экспорт в PDF"
                       >
@@ -720,6 +938,13 @@ export function AgentChat({
           </div>
         </div>
       )}
+
+      {/* Upsell modal */}
+      <UpsellModal
+        open={showUpsell}
+        onClose={() => setShowUpsell(false)}
+        variant={upsellVariant}
+      />
     </div>
   )
 }

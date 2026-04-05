@@ -14,6 +14,7 @@ const plans = [
     key: "starter",
     name: "Starter",
     price: 2990,
+    annualPrice: 28700,
     description: "Для первого запуска",
     features: [
       "1 распаковка (проект)",
@@ -28,6 +29,7 @@ const plans = [
     key: "pro",
     name: "Pro",
     price: 5490,
+    annualPrice: 52700,
     description: "Для серьёзного роста",
     features: [
       "3 распаковки (проекта)",
@@ -43,6 +45,7 @@ const plans = [
     key: "premium",
     name: "Premium",
     price: 8990,
+    annualPrice: 86300,
     description: "Максимум возможностей",
     features: [
       "5 распаковок (проектов)",
@@ -70,6 +73,7 @@ function PricingContent() {
   const searchParams = useSearchParams()
   const fromOnboarding = searchParams.get("onboarding") === "1"
   const [loading, setLoading] = useState<string | null>(null)
+  const [isAnnual, setIsAnnual] = useState(false)
 
   const handlePurchase = async (planKey: string) => {
     setLoading(planKey)
@@ -77,7 +81,7 @@ function PricingContent() {
       const res = await fetch("/api/payments/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planKey }),
+        body: JSON.stringify({ plan: planKey, billing: isAnnual ? "annual" : "monthly" }),
       })
 
       if (res.ok) {
@@ -129,12 +133,37 @@ function PricingContent() {
           <h1 className="font-heading text-4xl font-bold mb-3">
             Выбери свой тариф
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-8">
             {fromOnboarding
               ? "Выбери тариф и начни работу с AI-агентами прямо сейчас"
               : "Начни создавать онлайн-продукт с AI уже сегодня"
             }
           </p>
+
+          {/* Billing toggle */}
+          <div className="inline-flex items-center gap-3 glass rounded-full border border-gray-800/60 p-1.5">
+            <button
+              onClick={() => setIsAnnual(false)}
+              className={cn(
+                "px-5 py-2 rounded-full text-sm font-medium transition-all cursor-pointer",
+                !isAnnual ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-white"
+              )}
+            >
+              Месяц
+            </button>
+            <button
+              onClick={() => setIsAnnual(true)}
+              className={cn(
+                "px-5 py-2 rounded-full text-sm font-medium transition-all cursor-pointer flex items-center gap-2",
+                isAnnual ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-white"
+              )}
+            >
+              Год
+              <span className="text-[10px] font-bold bg-success/20 text-success rounded-full px-2 py-0.5">
+                -20%
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -164,10 +193,25 @@ function PricingContent() {
               </div>
 
               <div className="mb-6">
-                <span className="font-heading text-4xl font-bold">
-                  {plan.price.toLocaleString("ru-RU")}
-                </span>
-                <span className="text-muted-foreground"> ₽/мес</span>
+                {isAnnual ? (
+                  <>
+                    <span className="font-heading text-4xl font-bold">
+                      {plan.annualPrice.toLocaleString("ru-RU")}
+                    </span>
+                    <span className="text-muted-foreground"> ₽/год</span>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {Math.round(plan.annualPrice / 12).toLocaleString("ru-RU")} ₽/мес
+                      <span className="text-success ml-1.5">экономия {((1 - plan.annualPrice / (plan.price * 12)) * 100).toFixed(0)}%</span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-heading text-4xl font-bold">
+                      {plan.price.toLocaleString("ru-RU")}
+                    </span>
+                    <span className="text-muted-foreground"> ₽/мес</span>
+                  </>
+                )}
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">

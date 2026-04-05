@@ -155,18 +155,24 @@ export default function DashboardPage() {
             <CreditCard className="h-7 w-7 text-primary" />
           </div>
           <h2 className="font-heading text-2xl font-bold mb-2">
-            Выбери тариф, чтобы начать
+            Начни с бесплатной распаковки
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Для доступа к AI-агентам нужна активная подписка. Выбери подходящий тариф и начни создавать свой продукт.
+            Первый агент «Распаковщик» доступен бесплатно. Попробуй и убедись в качестве, а затем открой все 7 агентов.
           </p>
-          <Link href="/pricing">
-            <Button size="lg" className="cursor-pointer shadow-lg shadow-primary/20">
-              Выбрать тариф
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
-          <p className="text-xs text-muted-foreground mt-3">от 2 990 ₽/мес</p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/agent/unpacker">
+              <Button size="lg" variant="accent" className="cursor-pointer shadow-lg shadow-accent/20">
+                Начать распаковку бесплатно
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button size="lg" variant="outline" className="cursor-pointer">
+                Все тарифы
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 

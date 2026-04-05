@@ -7,6 +7,7 @@ import {
   getPreviousAgentCodes,
 } from "@/lib/agents/engine"
 import { loadAgentPrompt, getPipelineInstructions } from "@/lib/agents/prompts"
+import { trackEvent } from "@/lib/analytics/track"
 
 export async function POST(
   request: NextRequest,
@@ -61,41 +62,63 @@ export async function POST(
       .eq("workspace_id", projectData.workspace_id)
       .single()
 
-    if (!subscription || subscription.status !== "active") {
-      return new Response(
-        JSON.stringify({ error: "Нет активной подписки. Оформите тариф." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      )
-    }
+    const hasActiveSub = subscription
+      && subscription.status === "active"
+      && new Date(subscription.current_period_end) > new Date()
 
-    // Check if period expired
-    if (new Date(subscription.current_period_end) < new Date()) {
-      return new Response(
-        JSON.stringify({ error: "Подписка истекла. Продлите тариф." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      )
-    }
+    // ── FREEMIUM: Allow 1 free Unpacker run without subscription ──
+    if (!hasActiveSub) {
+      if (agentCode === "unpacker") {
+        // Check if user already used free Unpacker run
+        const { count: existingRuns } = await supabase
+          .from("agent_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .eq("user_id", user.id)
 
-    // Check project limits (number of active projects/распаковок)
-    const projectLimits: Record<string, number> = {
-      starter: 1,
-      pro: 3,
-      premium: 5,
-    }
-    const maxProjects = projectLimits[subscription.plan] || 1
+        // Allow first run (auto-greeting creates the run, so allow up to 1 existing)
+        if (existingRuns !== null && existingRuns > 1) {
+          return new Response(
+            JSON.stringify({
+              error: "Бесплатная распаковка использована. Оформите тариф для продолжения.",
+              upsell: true,
+            }),
+            { status: 403, headers: { "Content-Type": "application/json" } }
+          )
+        }
+        // else: allow free Unpacker run — skip subscription checks
+      } else {
+        return new Response(
+          JSON.stringify({
+            error: "Нет активной подписки. Оформите тариф для доступа к агенту.",
+            upsell: true,
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        )
+      }
+    } else {
+      // Has active subscription — check project limits
+      const projectLimits: Record<string, number> = {
+        starter: 1,
+        pro: 3,
+        premium: 5,
+      }
+      const maxProjects = projectLimits[subscription!.plan] || 1
 
-    const { count: projectCount } = await supabase
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .eq("workspace_id", projectData.workspace_id)
+      const { count: projectCount } = await supabase
+        .from("projects")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", projectData.workspace_id)
 
-    if (projectCount !== null && projectCount > maxProjects) {
-      return new Response(
-        JSON.stringify({
-          error: `Лимит проектов исчерпан (${projectCount}/${maxProjects}). Перейдите на более высокий тариф.`,
-        }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
-      )
+      if (projectCount !== null && projectCount > maxProjects) {
+        return new Response(
+          JSON.stringify({
+            error: `Лимит проектов исчерпан (${projectCount}/${maxProjects}). Перейдите на более высокий тариф.`,
+            upsell: true,
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        )
+      }
     }
   }
 
@@ -237,6 +260,11 @@ export async function POST(
   }
 
   const messages = allMessages
+
+  // Track agent message
+  if (!isAutoGreeting) {
+    trackEvent(supabase, "agent_message_sent", { agent: agentCode }, projectData?.workspace_id)
+  }
 
   // Select model: Sonnet for chat, Opus for artifact generation
   const model = selectModel(!!isArtifactRequest)

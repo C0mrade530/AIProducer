@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { trackEvent } from "@/lib/analytics/track"
 
 /**
  * POST /api/artifacts — сохранить артефакт из чата агента

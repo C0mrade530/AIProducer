@@ -80,11 +80,18 @@ export default function DashboardPage() {
         setProjects(projData.projects || [])
         setMaxProjects(projData.maxProjects || 1)
 
-        // Select first project by default
-        if (projData.projects?.length > 0) {
-          const firstProject = projData.projects[0]
-          setActiveProjectId(firstProject.id)
-          await loadProjectData(supabase, firstProject.id, firstProject.current_step)
+        // Pick active project: localStorage → first in list
+        const storedId = typeof window !== "undefined" ? localStorage.getItem("getprodi:active-project-id") : null
+        const active =
+          projData.projects?.find((p: { id: string }) => p.id === storedId) ||
+          projData.projects?.[0]
+
+        if (active) {
+          setActiveProjectId(active.id)
+          if (typeof window !== "undefined") {
+            localStorage.setItem("getprodi:active-project-id", active.id)
+          }
+          await loadProjectData(supabase, active.id, active.current_step)
         }
       }
     } catch {
@@ -136,6 +143,9 @@ export default function DashboardPage() {
     if (!project) return
     setActiveProjectId(projectId)
     setShowProjectMenu(false)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("getprodi:active-project-id", projectId)
+    }
     const supabase = createClient()
     await loadProjectData(supabase, projectId, project.current_step)
   }

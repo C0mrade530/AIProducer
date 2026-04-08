@@ -113,24 +113,67 @@ export default function SettingsPage() {
     }
   }
 
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState("")
+
   const saveProfile = async () => {
     if (!profile) return
     setSaving(true)
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (user) {
-      // Try to save all fields, if tracker fields don't exist yet - save without them
-      const { error } = await supabase.from("profiles").update(profile).eq("id", user.id)
+    setSaveError("")
+    setSaveSuccess(false)
 
-      if (error && error.message.includes("column") && error.message.includes("does not exist")) {
-        // Fallback: save only basic fields
-        const { name, niche, bio } = profile
-        await supabase.from("profiles").update({ name, niche, bio }).eq("id", user.id)
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("Сессия истекла")
+
+      // Explicit field list — avoids sending unknown columns
+      const baseFields = {
+        name: profile.name || "",
+        niche: profile.niche || "",
+        bio: profile.bio || "",
       }
+
+      // Try with tracker fields first
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          ...baseFields,
+          tracker_motivation: profile.tracker_motivation,
+          tracker_daily_fact: profile.tracker_daily_fact,
+          tracker_notify_time: profile.tracker_notify_time,
+        })
+        .eq("id", user.id)
+
+      if (error) {
+        // Retry without tracker fields
+        const { error: fallbackError } = await supabase
+          .from("profiles")
+          .update(baseFields)
+          .eq("id", user.id)
+
+        if (fallbackError) throw new Error(fallbackError.message)
+      }
+
+      // Also update workspace niche for consistency
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("owner_id", user.id)
+        .single()
+      if (ws) {
+        await supabase.from("workspaces").update({ niche: profile.niche || "" }).eq("id", ws.id)
+      }
+
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Ошибка сохранения")
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const generateTelegramLink = async () => {
@@ -232,13 +275,26 @@ export default function SettingsPage() {
                 Эта информация используется AI-агентами для более точных ответов
               </p>
             </div>
-            <Button
-              onClick={saveProfile}
-              loading={saving}
-              className="cursor-pointer"
-            >
-              Сохранить
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={saveProfile}
+                loading={saving}
+                className="cursor-pointer"
+              >
+                Сохранить
+              </Button>
+              {saveSuccess && (
+                <span className="text-sm text-success flex items-center gap-1.5 animate-fade-in">
+                  <Check className="h-4 w-4" />
+                  Сохранено
+                </span>
+              )}
+              {saveError && (
+                <span className="text-sm text-destructive animate-fade-in">
+                  {saveError}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 

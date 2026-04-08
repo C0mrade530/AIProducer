@@ -1,14 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { getAgentByCode } from "@/lib/agents/constants"
 import { AgentChat } from "@/components/agents/agent-chat"
 
+const ACTIVE_PROJECT_KEY = "getprodi:active-project-id"
+
 export default function AgentPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const agentCode = params.agentCode as string
   const agentConfig = getAgentByCode(agentCode)
 
@@ -22,6 +25,7 @@ export default function AgentPage() {
   useEffect(() => {
     if (!agentConfig) { router.push("/dashboard"); return }
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentCode])
 
   const loadData = async () => {
@@ -37,16 +41,42 @@ export default function AgentPage() {
 
     if (!workspace) { router.push("/dashboard"); return }
 
-    const { data: project } = await supabase
-      .from("projects")
-      .select("id, current_step")
-      .eq("workspace_id", workspace.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
+    // ── Pick project: URL param → localStorage → most recent ──
+    const urlProjectId = searchParams.get("projectId")
+    const storedProjectId = typeof window !== "undefined" ? localStorage.getItem(ACTIVE_PROJECT_KEY) : null
+    const preferredProjectId = urlProjectId || storedProjectId
+
+    let project: { id: string; current_step: number } | null = null
+
+    if (preferredProjectId) {
+      const { data } = await supabase
+        .from("projects")
+        .select("id, current_step")
+        .eq("id", preferredProjectId)
+        .eq("workspace_id", workspace.id)
+        .maybeSingle()
+      project = data
+    }
+
+    // Fallback: most recent project
+    if (!project) {
+      const { data } = await supabase
+        .from("projects")
+        .select("id, current_step")
+        .eq("workspace_id", workspace.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      project = data
+    }
 
     if (!project) { router.push("/dashboard"); return }
     setProjectId(project.id)
+
+    // Persist the active project so chat history survives navigation
+    if (typeof window !== "undefined") {
+      localStorage.setItem(ACTIVE_PROJECT_KEY, project.id)
+    }
 
     // Get agent def
     const { data: agentDef } = await supabase
@@ -61,7 +91,7 @@ export default function AgentPage() {
       return
     }
 
-    // Existing run
+    // Existing run — use maybeSingle so 0 rows doesn't throw
     const { data: existingRun } = await supabase
       .from("agent_runs")
       .select("id")
@@ -69,7 +99,7 @@ export default function AgentPage() {
       .eq("agent_id", agentDef.id)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (existingRun) {
       setRunId(existingRun.id)

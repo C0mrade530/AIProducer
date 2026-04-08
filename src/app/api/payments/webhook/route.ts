@@ -6,7 +6,12 @@ import { sendPaymentConfirmationEmail } from "@/lib/email/resend"
 /**
  * POST /api/payments/webhook — YooKassa webhook handler
  *
- * FIX #4: Verifies payment with YooKassa API before activating subscription.
+ * CRITICAL: Webhooks run WITHOUT an authenticated user session,
+ * so they can't bypass RLS with the anon client directly.
+ * We use SECURITY DEFINER Postgres functions (activate_subscription,
+ * finalize_payment) to safely activate subscriptions as the DB owner.
+ *
+ * Verifies payment with YooKassa API before activating (prevents spoofed webhooks).
  */
 export async function POST(request: NextRequest) {
   const body = await request.json()
@@ -19,24 +24,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid webhook" }, { status: 400 })
   }
 
-  // Log the event
-  const { data: existingPayment } = await supabase
-    .from("payments")
-    .select("id, workspace_id")
-    .eq("yookassa_payment_id", paymentObject.id)
-    .single()
+  // Log the event (non-blocking if RLS denies)
+  try {
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id, workspace_id")
+      .eq("yookassa_payment_id", paymentObject.id)
+      .maybeSingle()
 
-  if (existingPayment) {
-    await supabase.from("payment_events").insert({
-      payment_id: existingPayment.id,
-      event_type: event,
-      payload: body,
-    })
+    if (existingPayment) {
+      await supabase.from("payment_events").insert({
+        payment_id: existingPayment.id,
+        event_type: event,
+        payload: body,
+      })
+    }
+  } catch (err) {
+    console.error("Payment event log error:", err)
   }
 
-  // Handle payment.succeeded
+  // ── Handle payment.succeeded ──
   if (event === "payment.succeeded") {
-    // FIX #4: Verify payment with YooKassa API (don't trust webhook body alone)
+    // Verify payment with YooKassa API (don't trust webhook body alone)
     let verifiedPayment
     try {
       verifiedPayment = await getPayment(paymentObject.id)
@@ -53,58 +62,44 @@ export async function POST(request: NextRequest) {
     const metadata = verifiedPayment.metadata || {}
     const workspaceId = metadata.workspace_id
     const plan = metadata.plan
+    const userId = metadata.user_id
 
     if (!workspaceId || !plan) {
       console.error("Missing metadata in verified payment:", metadata)
       return NextResponse.json({ ok: true })
     }
 
-    // Update payment status
-    await supabase
-      .from("payments")
-      .update({
-        status: "succeeded",
-        paid_at: new Date().toISOString(),
-      })
-      .eq("yookassa_payment_id", paymentObject.id)
-
-    // Save payment_method_id for recurring payments
-    const paymentMethodId = verifiedPayment.payment_method?.id || (verifiedPayment as any).payment_method_id || null
-
-    // Create or update subscription
-    const { data: existingSub } = await supabase
-      .from("subscriptions")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .single()
-
     const periodDays = parseInt(metadata.period_days || "30", 10)
-    const now = new Date()
-    const periodEnd = new Date(now)
-    periodEnd.setDate(periodEnd.getDate() + periodDays)
+    const paymentMethodId =
+      verifiedPayment.payment_method?.id ||
+      (verifiedPayment as unknown as { payment_method_id?: string }).payment_method_id ||
+      null
 
-    const subData = {
-      plan,
-      status: "active",
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      cancel_at_period_end: false,
-      ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
+    // ── Activate subscription via SECURITY DEFINER function (bypasses RLS) ──
+    const { error: rpcError } = await supabase.rpc("activate_subscription", {
+      p_workspace_id: workspaceId,
+      p_plan: plan,
+      p_period_days: periodDays,
+      p_payment_method_id: paymentMethodId,
+    })
+
+    if (rpcError) {
+      console.error("activate_subscription RPC error:", rpcError)
+      return NextResponse.json({ error: "Subscription activation failed" }, { status: 500 })
     }
 
-    if (existingSub) {
-      await supabase
-        .from("subscriptions")
-        .update(subData)
-        .eq("id", existingSub.id)
-    } else {
-      await supabase.from("subscriptions").insert({
-        workspace_id: workspaceId,
-        ...subData,
+    // ── Finalize payment + track referral (also SECURITY DEFINER) ──
+    if (userId) {
+      const { error: finalizeError } = await supabase.rpc("finalize_payment", {
+        p_yookassa_payment_id: paymentObject.id,
+        p_paying_user_id: userId,
       })
+      if (finalizeError) {
+        console.error("finalize_payment RPC error:", finalizeError)
+      }
     }
 
-    // Send payment confirmation email (non-blocking)
+    // ── Send payment confirmation email (non-blocking) ──
     if (metadata.user_email) {
       sendPaymentConfirmationEmail(
         metadata.user_email,
@@ -114,92 +109,32 @@ export async function POST(request: NextRequest) {
       ).catch((err) => console.error("Payment email error:", err))
     }
 
-    // Track referral conversion: when referred user pays, update referral status
+    // ── Log usage event (best-effort; RLS may deny) ──
     try {
-      const { data: paidProfile } = await supabase
-        .from("profiles")
-        .select("id, referred_by")
-        .eq("id", metadata.user_id)
-        .single()
-
-      if (paidProfile?.referred_by) {
-        await supabase
-          .from("referrals")
-          .update({ status: "paid", paid_at: new Date().toISOString() })
-          .eq("referrer_id", paidProfile.referred_by)
-          .eq("referred_id", paidProfile.id)
-
-        // Check if referrer has earned free month (5 paid referrals)
-        const { count: paidReferrals } = await supabase
-          .from("referrals")
-          .select("id", { count: "exact", head: true })
-          .eq("referrer_id", paidProfile.referred_by)
-          .in("status", ["paid", "rewarded"])
-
-        if (paidReferrals && paidReferrals >= 5) {
-          // Mark all as rewarded
-          await supabase
-            .from("referrals")
-            .update({ status: "rewarded", reward_applied: true })
-            .eq("referrer_id", paidProfile.referred_by)
-            .eq("status", "paid")
-
-          // Extend referrer's subscription by 30 days
-          const { data: referrerWs } = await supabase
-            .from("workspaces")
-            .select("id")
-            .eq("owner_id", paidProfile.referred_by)
-            .single()
-
-          if (referrerWs) {
-            const { data: referrerSub } = await supabase
-              .from("subscriptions")
-              .select("id, current_period_end")
-              .eq("workspace_id", referrerWs.id)
-              .single()
-
-            if (referrerSub) {
-              const newEnd = new Date(referrerSub.current_period_end)
-              newEnd.setDate(newEnd.getDate() + 30)
-              await supabase
-                .from("subscriptions")
-                .update({ current_period_end: newEnd.toISOString() })
-                .eq("id", referrerSub.id)
-            }
-          }
-        }
-      }
+      await supabase.from("usage_events").insert({
+        workspace_id: workspaceId,
+        event_type: "payment_succeeded",
+        metadata: {
+          plan,
+          amount: verifiedPayment.amount?.value,
+          payment_id: verifiedPayment.id,
+        },
+      })
     } catch (err) {
-      console.error("Referral tracking error:", err)
-      // Non-critical — don't fail the webhook
+      console.error("Usage event log error:", err)
     }
-
-    // Log
-    await supabase.from("usage_events").insert({
-      workspace_id: workspaceId,
-      event_type: "payment_succeeded",
-      metadata: {
-        plan,
-        amount: verifiedPayment.amount?.value,
-        payment_id: verifiedPayment.id,
-      },
-    })
-
-    await supabase.from("audit_logs").insert({
-      user_id: metadata.user_id || null,
-      action: "payment.succeeded",
-      entity_type: "payment",
-      entity_id: existingPayment?.id,
-      metadata: { plan, amount: verifiedPayment.amount?.value },
-    })
   }
 
-  // Handle payment.canceled
+  // ── Handle payment.canceled ──
   if (event === "payment.canceled") {
-    await supabase
-      .from("payments")
-      .update({ status: "cancelled" })
-      .eq("yookassa_payment_id", paymentObject.id)
+    try {
+      await supabase
+        .from("payments")
+        .update({ status: "cancelled" })
+        .eq("yookassa_payment_id", paymentObject.id)
+    } catch (err) {
+      console.error("Payment cancel error:", err)
+    }
   }
 
   return NextResponse.json({ ok: true })

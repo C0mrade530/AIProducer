@@ -27,6 +27,7 @@ import {
 import { AGENTS, type AgentConfig } from "@/lib/agents/constants"
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder"
 import { UpsellModal } from "@/components/upsell-modal"
+import { readSSEStream } from "@/lib/stream-reader"
 
 /**
  * Export artifact as branded PDF using jsPDF.
@@ -162,15 +163,51 @@ async function exportArtifactPdf(title: string, contentMd: string, agentName?: s
   pdf.save(`${safeFilename} — GetProdi.pdf`)
 }
 
-// Fallback greetings if API fails
+/**
+ * Instant greetings — shown immediately while the server generates its full response.
+ * Structured like real interview openers — sets the user's expectations clearly
+ * that the agent will ask questions, not just chat.
+ */
 const AGENT_GREETINGS: Record<string, string> = {
-  unpacker: "Привет! Я — Распаковщик. Расскажи мне о себе: кто ты и чем занимаешься?",
-  methodologist: "Привет! Я — Методолог. Давай создадим твой продукт. Какой формат тебе ближе: курс, менторинг или консалтинг?",
-  promotion: "Привет! Я — Маркетолог. Расскажи, на каких площадках ты сейчас?",
-  warmup: "Привет! Я — Прогревщик. Планируешь запуск к дате или хочешь вечнозелёную систему?",
-  leadmagnet: "Привет! Давай создадим лид-магнит. Какой материал ты мог бы дать бесплатно?",
-  sales: "Привет! Как ты сейчас продаёшь — переписка, созвоны? Какой средний чек?",
-  tracker: "Привет! Проанализирую твой путь и создам план на неделю. Что ты уже внедрил?",
+  unpacker: `Привет! Я — твой стратег-распаковщик.
+
+Моя задача — провести с тобой глубинный разбор: понять, кто ты как эксперт, что тебя блокирует изнутри и какой конкретный путь приведёт к прорыву.
+
+Я буду задавать вопросы по 7 блокам: личность, ментальные блоки, продукт, продвижение, продажи, контент и стратегия. Отвечай честно — чем глубже ответы, тем точнее результат.
+
+Начнём с первого блока — **Личность и контекст**.
+
+**Вопрос 1:** Расскажи о себе так, как рассказал бы новому знакомому за 2 минуты. Кто ты, чем занимаешься, как давно в этой нише?`,
+  methodologist: `Привет! Я — Методолог.
+
+Я изучил результаты твоей распаковки и теперь мы создадим твой продукт — с чёткой структурой, методологией и офферами.
+
+**Вопрос 1:** Какой формат продукта тебе ближе — курс, менторинг, консалтинг или групповая программа? И какой главный результат должен получить клиент после работы с тобой?`,
+  promotion: `Привет! Я — Маркетолог.
+
+На основе твоего продукта и позиционирования мы построим контент-стратегию, которая будет приводить клиентов.
+
+**Вопрос 1:** На каких площадках ты сейчас присутствуешь (Instagram, Telegram, YouTube, другие)? Какой контент уже публикуешь и какой даёт лучший отклик?`,
+  warmup: `Привет! Я — Прогревщик.
+
+Мы выстроим систему прогрева, которая превращает холодную аудиторию в готовых платить клиентов.
+
+**Вопрос 1:** Ты планируешь запуск к конкретной дате или хочешь вечнозелёную систему прогрева, которая работает постоянно?`,
+  leadmagnet: `Привет! Я — Лид-магнитист.
+
+Мы создадим бесплатный материал, который приведёт людей в твою воронку и покажет твою экспертизу.
+
+**Вопрос 1:** Какую маленькую часть проблемы клиента ты можешь решить бесплатно — через чек-лист, гайд, мини-урок или аудит?`,
+  sales: `Привет! Я — Продажник.
+
+Мы напишем скрипты и выстроим процесс продаж, чтобы ты закрывал больше заявок в оплату — без ощущения «впаривания».
+
+**Вопрос 1:** Как ты сейчас продаёшь — через переписку в Direct, созвоны, вебинары? И какой у тебя средний чек?`,
+  tracker: `Привет! Я — Трекер.
+
+Я проанализирую весь твой путь от распаковки до продаж и создам конкретный план на неделю с задачами и дедлайнами.
+
+**Вопрос 1:** Что из материалов предыдущих агентов ты уже начал внедрять? С какими шагами есть сложности?`,
 }
 
 interface Message {
@@ -257,15 +294,41 @@ export function AgentChat({
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Auto-send first message from agent when chat is empty
+  // ═══ INSTANT GREETING with typewriter animation ═══
+  // No server call — show the pre-written greeting immediately.
+  // The real LLM conversation begins when the user sends their first message.
   const autoSentRef = useRef(false)
+  const [isTypingGreeting, setIsTypingGreeting] = useState(false)
+
   useEffect(() => {
     if (messages.length === 0 && !autoSentRef.current && projectId) {
       autoSentRef.current = true
-      sendAutoGreeting()
+      showInstantGreeting()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, messages.length])
 
+  const showInstantGreeting = () => {
+    const greeting = AGENT_GREETINGS[agentCode] || "Привет! Давай начнём работу."
+    setIsTypingGreeting(true)
+    setMessages([{ role: "assistant", content: "" }])
+
+    // Typewriter animation — reveal character by character
+    let i = 0
+    const speed = 8 // ms per character
+    const interval = setInterval(() => {
+      i++
+      const current = greeting.slice(0, i)
+      setMessages([{ role: "assistant", content: current }])
+      if (i >= greeting.length) {
+        clearInterval(interval)
+        setIsTypingGreeting(false)
+      }
+    }, speed)
+  }
+
+  // Deprecated helper kept for reference (no longer called).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const sendAutoGreeting = async () => {
     setIsStreaming(true)
     setMessages([{ role: "assistant", content: "" }])
@@ -300,27 +363,12 @@ export function AgentChat({
       if (newRunId) setRunId(newRunId)
 
       const reader = res.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullContent = ""
-
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const text = decoder.decode(value)
-          for (const line of text.split("\n")) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const data = JSON.parse(line.slice(6))
-                const delta = data.choices?.[0]?.delta?.content
-                if (delta) {
-                  fullContent += delta
-                  setMessages([{ role: "assistant", content: fullContent }])
-                }
-              } catch { /* skip */ }
-            }
-          }
-        }
+        let fullContent = ""
+        await readSSEStream(reader, (delta) => {
+          fullContent += delta
+          setMessages([{ role: "assistant", content: fullContent }])
+        })
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : ""
@@ -347,6 +395,11 @@ export function AgentChat({
     // Add empty assistant message for streaming
     setMessages((prev) => [...prev, { role: "assistant", content: "" }])
 
+    // On the very first user message, also send the pre-written greeting so
+    // the server persists it as the first assistant message in history.
+    const isFirstUserMessage = !runId
+    const persistedGreeting = isFirstUserMessage ? AGENT_GREETINGS[agentCode] : undefined
+
     try {
       const res = await fetch(`/api/agents/${agentCode}/run`, {
         method: "POST",
@@ -355,6 +408,7 @@ export function AgentChat({
           message: userMessage,
           projectId,
           runId,
+          initialGreeting: persistedGreeting,
         }),
       })
 
@@ -377,39 +431,16 @@ export function AgentChat({
       if (newRunId && !runId) setRunId(newRunId)
 
       const reader = res.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullContent = ""
-
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const text = decoder.decode(value)
-          const lines = text.split("\n")
-
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const data = JSON.parse(line.slice(6))
-                const delta = data.choices?.[0]?.delta?.content
-                if (delta) {
-                  fullContent += delta
-                  setMessages((prev) => {
-                    const updated = [...prev]
-                    updated[updated.length - 1] = {
-                      role: "assistant",
-                      content: fullContent,
-                    }
-                    return updated
-                  })
-                }
-              } catch {
-                // Skip
-              }
-            }
-          }
-        }
+        let fullContent = ""
+        await readSSEStream(reader, (delta) => {
+          fullContent += delta
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: "assistant", content: fullContent }
+            return updated
+          })
+        })
       }
     } catch (error) {
       console.error("Chat error:", error)
@@ -458,31 +489,16 @@ export function AgentChat({
       if (newRunId && !runId) setRunId(newRunId)
 
       const reader = res.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullContent = ""
-
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const text = decoder.decode(value)
-          for (const line of text.split("\n")) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const data = JSON.parse(line.slice(6))
-                const delta = data.choices?.[0]?.delta?.content
-                if (delta) {
-                  fullContent += delta
-                  setMessages((prev) => {
-                    const updated = [...prev]
-                    updated[updated.length - 1] = { role: "assistant", content: fullContent }
-                    return updated
-                  })
-                }
-              } catch { /* skip */ }
-            }
-          }
-        }
+        let fullContent = ""
+        await readSSEStream(reader, (delta) => {
+          fullContent += delta
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: "assistant", content: fullContent }
+            return updated
+          })
+        })
       }
     } catch (error) {
       console.error("Chat error:", error)
@@ -643,12 +659,24 @@ export function AgentChat({
                     : "glass border border-gray-800/60 relative"
                 )}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
-                {msg.role === "assistant" &&
-                  isStreaming &&
-                  i === messages.length - 1 && (
-                    <span className="inline-block w-2 h-4 bg-current opacity-50 animate-pulse ml-0.5" />
-                  )}
+                {msg.role === "assistant" && isStreaming && !msg.content && i === messages.length - 1 ? (
+                  // Thinking indicator — three bouncing dots while waiting for first token
+                  <div className="flex items-center gap-1 py-1">
+                    <span className="h-2 w-2 rounded-full bg-primary/60 typing-dot" style={{ animationDelay: "0ms" }} />
+                    <span className="h-2 w-2 rounded-full bg-primary/60 typing-dot" style={{ animationDelay: "150ms" }} />
+                    <span className="h-2 w-2 rounded-full bg-primary/60 typing-dot" style={{ animationDelay: "300ms" }} />
+                    <span className="text-xs text-muted-foreground ml-2">{agentConfig.name} думает...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    {msg.role === "assistant" &&
+                      (isStreaming || isTypingGreeting) &&
+                      i === messages.length - 1 && (
+                        <span className="inline-block w-2 h-4 bg-current opacity-50 animate-pulse ml-0.5" />
+                      )}
+                  </>
+                )}
               </div>
 
               {/* Save as artifact button */}
@@ -700,12 +728,12 @@ export function AgentChat({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Напишите сообщение..."
-              className="pr-24 min-h-[52px] max-h-[200px] resize-none rounded-xl text-base bg-white/5 border-gray-800/60 focus:border-violet-500/40"
-              rows={1}
+              placeholder="Напишите сообщение... (Enter — отправить, Shift+Enter — новая строка)"
+              className="pr-24 pt-4 pb-4 min-h-[88px] max-h-[280px] resize-none rounded-2xl text-base bg-white/5 border-gray-800/60 focus:border-violet-500/40 placeholder:text-gray-500"
+              rows={3}
               disabled={isStreaming}
             />
-            <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
+            <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
               {/* Voice recording button */}
               <button
                 type="button"

@@ -2,7 +2,22 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 /**
- * GET /api/referrals — get current user's referral info
+ * Generate a readable 8-char referral code.
+ * Avoids ambiguous characters (0/O, 1/I/l).
+ */
+function generateReferralCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  let code = ""
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return code
+}
+
+/**
+ * GET /api/referrals — get current user's referral info.
+ * Auto-generates a referral code if the user doesn't have one yet
+ * (fallback for users created before the DB trigger existed).
  */
 export async function GET() {
   const supabase = await createClient()
@@ -19,7 +34,26 @@ export async function GET() {
     .from("profiles")
     .select("referral_code")
     .eq("id", user.id)
-    .single()
+    .maybeSingle()
+
+  let referralCode = profile?.referral_code
+
+  // Auto-generate code if missing
+  if (!referralCode) {
+    // Retry a few times in case of unique collision
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = generateReferralCode()
+      const { error } = await supabase
+        .from("profiles")
+        .update({ referral_code: candidate })
+        .eq("id", user.id)
+
+      if (!error) {
+        referralCode = candidate
+        break
+      }
+    }
+  }
 
   // Get referral stats
   const { data: referrals } = await supabase
@@ -32,7 +66,7 @@ export async function GET() {
   const paid = referrals?.filter((r) => r.status === "paid" || r.status === "rewarded").length || 0
 
   return NextResponse.json({
-    referralCode: profile?.referral_code || null,
+    referralCode: referralCode || null,
     stats: { total, registered, paid },
   })
 }

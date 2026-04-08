@@ -26,6 +26,7 @@ export async function POST(
 
   const body = await request.json()
   let { message, projectId, runId, isArtifactRequest } = body
+  const initialGreeting: string | undefined = body.initialGreeting
 
   if (!message || !projectId) {
     return new Response("Missing message or projectId", { status: 400 })
@@ -193,6 +194,16 @@ export async function POST(
       .single()
 
     currentRunId = newRun?.id
+
+    // Persist the pre-written instant greeting as the first assistant message
+    // so the user sees it in history after reload.
+    if (currentRunId && initialGreeting) {
+      await supabase.from("agent_messages").insert({
+        run_id: currentRunId,
+        role: "assistant",
+        content: initialGreeting,
+      })
+    }
   }
 
   // Save user message (skip for auto-greeting — agent speaks first)
@@ -279,27 +290,43 @@ export async function POST(
       maxTokens: settings.max_tokens || 4096,
     })
 
-    // Transform stream to collect full response for saving
+    // Transform stream to collect full response for saving.
+    // IMPORTANT: single TextDecoder with { stream: true } to preserve incomplete
+    // multi-byte UTF-8 sequences across chunks (fixes Cyrillic typos like "эоципиальная").
+    // Also buffer incomplete SSE lines across chunks.
     let fullContent = ""
+    const decoder = new TextDecoder("utf-8")
+    let lineBuffer = ""
 
     const transformStream = new TransformStream({
       transform(chunk, controller) {
         controller.enqueue(chunk)
-        const text = new TextDecoder().decode(chunk)
-        const lines = text.split("\n")
+        lineBuffer += decoder.decode(chunk, { stream: true })
+        const lines = lineBuffer.split("\n")
+        lineBuffer = lines.pop() || "" // keep incomplete tail for next chunk
         for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6))
-              const delta = data.choices?.[0]?.delta?.content
-              if (delta) fullContent += delta
-            } catch {
-              // Skip parse errors
-            }
+          const trimmed = line.trim()
+          if (!trimmed.startsWith("data: ") || trimmed === "data: [DONE]") continue
+          try {
+            const data = JSON.parse(trimmed.slice(6))
+            const delta = data.choices?.[0]?.delta?.content
+            if (delta) fullContent += delta
+          } catch {
+            // Skip parse errors
           }
         }
       },
       async flush() {
+        // Flush any remaining buffered line
+        lineBuffer += decoder.decode()
+        if (lineBuffer.trim().startsWith("data: ") && lineBuffer.trim() !== "data: [DONE]") {
+          try {
+            const data = JSON.parse(lineBuffer.trim().slice(6))
+            const delta = data.choices?.[0]?.delta?.content
+            if (delta) fullContent += delta
+          } catch { /* skip */ }
+        }
+
         // Save assistant message
         if (fullContent && currentRunId) {
           await supabase.from("agent_messages").insert({

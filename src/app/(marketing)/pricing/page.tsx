@@ -12,49 +12,49 @@ import { cn } from "@/lib/utils"
 const plans = [
   {
     key: "starter",
-    name: "Starter",
+    name: "Старт",
     price: 2990,
     annualPrice: 28700,
-    description: "Для первого запуска",
+    description: "Создай один онлайн-продукт с нуля",
+    subtitle: "Для первого запуска",
     features: [
-      "1 распаковка (проект)",
-      "Все 7 AI-агентов",
-      "Сохранение артефактов",
-      "Экспорт результатов",
-      "Базовый трекер задач",
+      "1 готовый продукт под ключ",
+      "7 AI-агентов: распаковка, методология, маркетинг, прогрев, воронки, продажи, трекинг",
+      "Сохранение результатов в PDF и Markdown",
+      "История всех диалогов с агентами",
+      "Email-поддержка в течение 24 часов",
     ],
     popular: false,
   },
   {
     key: "pro",
-    name: "Pro",
+    name: "Про",
     price: 5490,
     annualPrice: 52700,
-    description: "Для серьёзного роста",
+    description: "Запусти и масштабируй до 3 продуктов",
+    subtitle: "Для серьёзного роста",
     features: [
-      "3 распаковки (проекта)",
-      "Все 7 AI-агентов",
-      "Telegram-трекер",
-      "Свободный чат с трекером",
-      "Приоритетная генерация",
-      "Экспорт результатов",
+      "До 3 одновременных продуктов (курсы, менторинг, консалтинг)",
+      "Всё из тарифа «Старт»",
+      "Ежедневный Telegram-помощник с задачами и мотивацией",
+      "Свободный чат с AI-трекером без ограничений",
+      "Приоритетная обработка запросов (работает быстрее)",
     ],
     popular: true,
   },
   {
     key: "premium",
-    name: "Premium",
+    name: "Премиум",
     price: 8990,
     annualPrice: 86300,
-    description: "Максимум возможностей",
+    description: "Создай целую продуктовую линейку",
+    subtitle: "Максимум возможностей",
     features: [
-      "5 распаковок (проектов)",
-      "Все 7 AI-агентов",
-      "Telegram-трекер",
-      "Свободный чат с трекером",
-      "Opus для артефактов",
-      "Экспорт результатов",
-      "Приоритетная поддержка",
+      "До 5 одновременных продуктов",
+      "Всё из тарифа «Про»",
+      "Claude Opus — самая мощная модель для финальных артефактов",
+      "VIP-поддержка в Telegram",
+      "Приоритетный доступ к новым функциям",
     ],
     popular: false,
   },
@@ -74,9 +74,12 @@ function PricingContent() {
   const fromOnboarding = searchParams.get("onboarding") === "1"
   const [loading, setLoading] = useState<string | null>(null)
   const [isAnnual, setIsAnnual] = useState(false)
+  const [paymentError, setPaymentError] = useState("")
 
   const handlePurchase = async (planKey: string) => {
     setLoading(planKey)
+    setPaymentError("")
+
     try {
       const res = await fetch("/api/payments/create", {
         method: "POST",
@@ -84,21 +87,30 @@ function PricingContent() {
         body: JSON.stringify({ plan: planKey, billing: isAnnual ? "annual" : "monthly" }),
       })
 
-      if (res.ok) {
-        const { checkoutUrl } = await res.json()
-        if (checkoutUrl) {
-          window.location.href = checkoutUrl
-          return
-        }
-      }
-
-      // If not logged in, redirect to register
+      // Not logged in → send to register
       if (res.status === 401) {
-        router.push("/register")
+        router.push(`/register?next=/pricing`)
         return
       }
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        const errMsg = errData?.error || `Ошибка сервера (${res.status})`
+        console.error("Payment error:", errMsg, errData)
+        setPaymentError(errMsg)
+        return
+      }
+
+      const data = await res.json()
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+        return
+      }
+
+      setPaymentError("Не удалось получить ссылку на оплату. Попробуй ещё раз.")
     } catch (error) {
       console.error("Purchase error:", error)
+      setPaymentError("Не удалось связаться с сервером. Проверь интернет и попробуй снова.")
     } finally {
       setLoading(null)
     }
@@ -133,11 +145,14 @@ function PricingContent() {
           <h1 className="font-heading text-4xl font-bold mb-3">
             Выбери свой тариф
           </h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            {fromOnboarding
-              ? "Выбери тариф и начни работу с AI-агентами прямо сейчас"
-              : "Начни создавать онлайн-продукт с AI уже сегодня"
-            }
+          <p className="text-lg text-muted-foreground mb-4 max-w-2xl mx-auto">
+            GetProdi — это 7 AI-агентов, которые за неделю помогут тебе:
+            найти позиционирование, создать онлайн-продукт, написать
+            контент-план, скрипты продаж и пошаговый план действий.
+          </p>
+          <p className="text-sm text-muted-foreground mb-8">
+            Это заменяет команду продюсера, методолога и маркетолога
+            (~730 000 ₽/мес) одной подпиской.
           </p>
 
           {/* Billing toggle */}
@@ -166,6 +181,12 @@ function PricingContent() {
           </div>
         </div>
 
+        {paymentError && (
+          <div className="max-w-2xl mx-auto mb-6 bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-center">
+            <p className="text-sm text-destructive">{paymentError}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan) => (
             <div
@@ -184,10 +205,13 @@ function PricingContent() {
               )}
 
               <div className="mb-6">
-                <h3 className="font-heading text-xl font-bold mb-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-400 mb-1">
+                  {plan.subtitle}
+                </p>
+                <h3 className="font-heading text-2xl font-bold mb-2">
                   {plan.name}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground leading-snug">
                   {plan.description}
                 </p>
               </div>

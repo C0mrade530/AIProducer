@@ -22,15 +22,18 @@ export async function POST(request: NextRequest) {
   const price = isAnnual ? selectedPlan.annualPrice : selectedPlan.price
   const periodDays = isAnnual ? 365 : 30
 
-  // Get workspace
+  // Get workspace (maybeSingle — won't throw if missing)
   const { data: workspace } = await supabase
     .from("workspaces")
     .select("id")
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (!workspace) {
-    return NextResponse.json({ error: "No workspace found" }, { status: 404 })
+    return NextResponse.json(
+      { error: "Сначала пройди короткий onboarding", needsOnboarding: true },
+      { status: 404 }
+    )
   }
 
   // Get profile name for email
@@ -70,11 +73,20 @@ export async function POST(request: NextRequest) {
     // Return checkout URL
     const checkoutUrl = payment.confirmation?.confirmation_url
 
+    if (!checkoutUrl) {
+      console.error("No confirmation_url in YooKassa response:", payment)
+      return NextResponse.json(
+        { error: "Платёжный сервис не вернул ссылку на оплату. Попробуй ещё раз." },
+        { status: 502 }
+      )
+    }
+
     return NextResponse.json({ checkoutUrl, paymentId: payment.id })
   } catch (error) {
-    console.error("Payment creation error:", error)
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error("Payment creation error:", errMsg)
     return NextResponse.json(
-      { error: "Failed to create payment" },
+      { error: `Ошибка создания платежа: ${errMsg}` },
       { status: 500 }
     )
   }
